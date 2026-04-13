@@ -101,35 +101,33 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .hc-inner { display: flex; align-items: flex-start; }
 
 /*
-  THUMBNAIL COLUMN: flex column instead of all-absolute children.
-  The comm-bar and img are in normal flow, which gives the container
-  real intrinsic height. Nav buttons and upload label overlay via absolute.
+  THUMBNAIL COLUMN: block container with explicit height + in-flow image.
+  height: 76px AND a display:block img child = bulletproof in all browsers.
+  Comm-bar overlays on top via absolute. Nav buttons and upload also absolute.
 */
 .hc-thumb-col {
   width: 76px;
   min-width: 76px;
+  height: 76px;
+  min-height: 76px;
+  position: relative;
   flex-shrink: 0;
+  overflow: hidden;
   margin: 8px 0 8px 8px;
   border-radius: 7px;
-  overflow: hidden;
   background: var(--sand-mid);
-  position: relative;   /* anchor for absolute overlays */
-  display: flex;
-  flex-direction: column;
-  align-self: flex-start;
 }
 .hc-comm-bar {
-  width: 100%;
+  position: absolute;
+  top: 0; left: 0; right: 0;
   height: 3px;
-  flex-shrink: 0;
-  display: block;
+  z-index: 2;
 }
 .hc-thumb {
-  width: 76px;
-  height: 73px;    /* 76 - 3px comm-bar */
-  object-fit: cover;
   display: block;
-  flex-shrink: 0;
+  width: 76px;
+  height: 76px;
+  object-fit: cover;
 }
 
 /* Nav overlay buttons — absolute on top of image */
@@ -234,6 +232,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .mphoto-btn-sm.rm { color: #c0392b; border-color: rgba(192,57,43,0.3); }
 .mphoto-btn-sm.rm:hover { background: rgba(192,57,43,0.08); border-color: #c0392b; }
 .mphoto-btn-sm:disabled { opacity: 0.25; cursor: not-allowed; }
+.mphoto-btn-spacer { display: inline-block; width: 27px; height: 22px; }
 .mphoto-add { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
 .mphoto-add input[type=text] { flex: 1; border: 1px solid var(--border-md); border-radius: 6px; padding: 6px 9px; font-size: 11px; color: var(--brown); background: var(--sand-lt); outline: none; font-family: inherit; min-width: 0; }
 .mphoto-add input[type=text]:focus { border-color: var(--copper); background: #fff; }
@@ -763,8 +762,8 @@ function renderMPhotos(basePhoto) {
         <img src="${p}" onerror="this.style.opacity=0.3" alt="">
       </div>
       <div class="mphoto-controls">
-        <button class="mphoto-btn-sm" onclick="moveMPhoto(${i},-1)" ${i===0?'disabled':''} title="Move earlier">&#8593;</button>
-        <button class="mphoto-btn-sm" onclick="moveMPhoto(${i},1)" ${i===mPhotos.length-1?'disabled':''} title="Move later">&#8595;</button>
+        ${mPhotos.length > 1 && i > 0 ? `<button class="mphoto-btn-sm" onclick="moveMPhoto(${i},-1)" title="Move earlier">&#8593;</button>` : `<span class="mphoto-btn-spacer"></span>`}
+        ${mPhotos.length > 1 && i < mPhotos.length-1 ? `<button class="mphoto-btn-sm" onclick="moveMPhoto(${i},1)" title="Move later">&#8595;</button>` : `<span class="mphoto-btn-spacer"></span>`}
         <button class="mphoto-btn-sm rm" onclick="rmMPhoto(${i})" title="Delete photo">&#215;</button>
       </div>
     </div>`).join('');
