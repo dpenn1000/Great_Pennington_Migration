@@ -487,8 +487,16 @@ function merged(h, c) {
   };
 }
 function flat() { return C.flatMap(c => c.properties.map(h => merged(h, c))); }
-function propPhotos(h) { return [h.photo, ...(SBP[h.id]?.photos||[])].filter(Boolean); }
-function commPhotos(c) { return [c.photo, ...(SBC[c.id]?.photos||[])].filter(Boolean); }
+function propPhotos(h) {
+  const sb = SBP[h.id];
+  if (sb?.photos?.length) return sb.photos; // Supabase photos = full list (includes base)
+  return [h.photo].filter(Boolean);          // fallback: JSON base only
+}
+function commPhotos(c) {
+  const sb = SBC[c.id];
+  if (sb?.photos?.length) return sb.photos;
+  return [c.photo].filter(Boolean);
+}
 function currentPhoto(h) {
   const photos = propPhotos(h);
   return photos[Math.min(st.pidx[h.id]||0, photos.length-1)] || h.cphoto || '';
@@ -580,10 +588,10 @@ function rGrid() {
     const photo=photos[idx]||h.cphoto||'';
     const r=h.rating;
     return `<div class="hc${st.sh===h.id?' on':''}" style="${st.sh===h.id?'border-color:'+h.dk+';':''}" onclick="pH('${h.id}')">
-      <div class="hc-inner">
-        <div class="hc-thumb-col" id="tc-${h.id}">
-          <div class="hc-comm-bar" style="background:${h.clr};"></div>
-          <div class="hc-thumb" style="background-image:url('${photo||h.cphoto||''}')"></div>
+      <div class="hc-inner" style="display:flex;align-items:flex-start;">
+        <div class="hc-thumb-col" id="tc-${h.id}" style="width:76px;min-width:76px;height:76px;min-height:76px;position:relative;flex-shrink:0;align-self:flex-start;overflow:hidden;border-radius:7px;margin:8px 0 8px 8px;background:var(--sand-mid);">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${h.clr};z-index:2;"></div>
+          <div class="hc-thumb" style="position:absolute;inset:0;background-image:url('${photo||h.cphoto||''}');background-size:cover;background-position:center;"></div>
           ${photos.length>1?`
             <button class="hc-nav hc-nav-prev" onclick="navProp('${h.id}',-1,event)">&#8249;</button>
             <button class="hc-nav hc-nav-next" onclick="navProp('${h.id}',1,event)">&#8250;</button>
@@ -692,7 +700,7 @@ function openPropEdit(id,e){
   e.stopPropagation();
   editMode='property'; editId=id;
   const h=flat().find(x=>x.id===id);
-  mPhotos=[...(SBP[id]?.photos||[])];
+  mPhotos=[...propPhotos(h)];  // ALL photos, fully editable
   document.getElementById('em-title').textContent=h.address;
   document.getElementById('em-body').innerHTML=`
     <div class="ef"><label>Price</label><input id="ef-price" value="${h.price}"></div>
@@ -705,8 +713,8 @@ function openPropEdit(id,e){
     <div class="ef"><label>Features (comma-separated)</label><input id="ef-feats" value="${h.features.join(', ')}"></div>
     <div class="ef"><label>Zillow URL</label><input id="ef-zillow" value="${h.zillow}"></div>
     <div class="ef"><label>Notes</label><textarea id="ef-notes">${h.notes}</textarea></div>
-    <div class="ef"><label>Photos &mdash; <span style="font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;">base photo locked; extras can be reordered or deleted</span></label>
-      <div class="mphoto-list" id="mphoto-list">${renderMPhotos(h.photo)}</div>
+    <div class="ef"><label>Photos &mdash; <span style="font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;">first photo shows on card; all can be reordered or deleted</span></label>
+      <div class="mphoto-list" id="mphoto-list">${renderMPhotos()}</div>
       <div class="mphoto-add">
         <input type="text" id="mphoto-url" placeholder="Paste photo URL...">
         <button class="mphoto-add-btn" onclick="addMPhotoUrl()">Add URL</button>
@@ -723,15 +731,15 @@ function openCommEdit(id,e){
   e.stopPropagation();
   editMode='community'; editId=id;
   const c=C.find(x=>x.id===id), sb=SBC[id]||{};
-  mPhotos=[...(sb.photos||[])];
+  mPhotos=[...commPhotos(c)];  // ALL photos, fully editable
   document.getElementById('em-title').textContent=sb.name||c.name;
   document.getElementById('em-body').innerHTML=`
     <div class="ef"><label>Name</label><input id="ef-cname" value="${sb.name||c.name}"></div>
     <div class="ef"><label>Description</label><textarea id="ef-cdesc">${sb.description||c.desc}</textarea></div>
     <div class="ef"><label>Amenities (comma-separated)</label><input id="ef-camen" value="${(sb.amenities||c.amenities).join(', ')}"></div>
     <div class="ef"><label>HOA</label><input id="ef-choa" value="${sb.hoa||c.hoa}"></div>
-    <div class="ef"><label>Photos &mdash; <span style="font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;">base photo locked; extras can be reordered or deleted</span></label>
-      <div class="mphoto-list" id="mphoto-list">${renderMPhotos(c.photo)}</div>
+    <div class="ef"><label>Photos &mdash; <span style="font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;">first photo shows on card; all can be reordered or deleted</span></label>
+      <div class="mphoto-list" id="mphoto-list">${renderMPhotos()}</div>
       <div class="mphoto-add">
         <input type="text" id="mphoto-url" placeholder="Paste photo URL...">
         <button class="mphoto-add-btn" onclick="addMPhotoUrl()">Add URL</button>
@@ -744,37 +752,24 @@ function openCommEdit(id,e){
 /* ============================================================
    PHOTO MANAGER - SHARED
    ============================================================ */
-function renderMPhotos(basePhoto) {
-  // Base photo (index -1 conceptually): shown but locked
-  const baseHTML = basePhoto
-    ? `<div class="mphoto-item">
-        <div class="mphoto-thumb">
-          <img src="${basePhoto}" onerror="this.style.opacity=0.3" alt="">
-          <span class="mphoto-badge">base &mdash; locked</span>
-        </div>
-      </div>`
-    : '';
-
-  const extrasHTML = mPhotos.map((p,i) => `
+function renderMPhotos() {
+  if (!mPhotos.length) return `<div style="font-size:11px;color:var(--brown-lt);padding:8px 0;font-style:italic;">No photos yet. Add one below.</div>`;
+  return mPhotos.map((p,i) => `
     <div class="mphoto-item" id="mph-${i}">
       <div class="mphoto-thumb">
         <img src="${p}" onerror="this.style.opacity=0.3" alt="">
+        ${i===0 ? '<span class="mphoto-badge">cover</span>' : ''}
       </div>
       <div class="mphoto-controls">
-        ${mPhotos.length > 1 && i > 0 ? `<button class="mphoto-btn-sm" onclick="moveMPhoto(${i},-1)" title="Move earlier">&#8593;</button>` : `<span class="mphoto-btn-spacer"></span>`}
-        ${mPhotos.length > 1 && i < mPhotos.length-1 ? `<button class="mphoto-btn-sm" onclick="moveMPhoto(${i},1)" title="Move later">&#8595;</button>` : `<span class="mphoto-btn-spacer"></span>`}
+        ${i > 0 ? `<button class="mphoto-btn-sm" onclick="moveMPhoto(${i},-1)" title="Move earlier">&#8593;</button>` : `<span class="mphoto-btn-spacer"></span>`}
+        ${i < mPhotos.length-1 ? `<button class="mphoto-btn-sm" onclick="moveMPhoto(${i},1)" title="Move later">&#8595;</button>` : `<span class="mphoto-btn-spacer"></span>`}
         <button class="mphoto-btn-sm rm" onclick="rmMPhoto(${i})" title="Delete photo">&#215;</button>
       </div>
     </div>`).join('');
-
-  return baseHTML + extrasHTML;
 }
 
 function refreshMPhotos(){
-  const base=editMode==='property'
-    ? (flat().find(x=>x.id===editId)?.photo||'')
-    : (C.find(x=>x.id===editId)?.photo||'');
-  document.getElementById('mphoto-list').innerHTML=renderMPhotos(base);
+  document.getElementById('mphoto-list').innerHTML=renderMPhotos();
 }
 
 function moveMPhoto(i,dir){
