@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Great Pennington Migration — April 2026</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/cormorant-garamond@5/700.css" rel="stylesheet">
+<style>
+:root {
+  --sand:       #EFE8DB;
+  --sand-lt:    #F7F2EA;
+  --sand-mid:   #E6DBCB;
+  --sand-dk:    #D8CAAF;
+  --copper:     #B86A2A;
+  --copper-dk:  #8A4E1C;
+  --copper-lt:  #D4915A;
+  --turquoise:  #2A8FA5;
+  --gold:       #E8A020;
+  --brown:      #4A2608;
+  --brown-lt:   #7A4A20;
+  --white:      #FFFFFF;
+  --border:     rgba(184,106,42,0.18);
+  --border-md:  rgba(184,106,42,0.32);
+  --border-str: rgba(184,106,42,0.55);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--sand); color: var(--brown); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* HEADER */
+.header { background: #fff; border-bottom: 1px solid var(--border-md); flex-shrink: 0; }
+.header-top { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px 8px; gap: 16px; }
+.logo { display: flex; align-items: stretch; }
+.logo-bar { width: 3px; background: linear-gradient(to bottom, var(--copper), var(--turquoise)); border-radius: 2px; margin-right: 12px; flex-shrink: 0; }
+.logo-text { display: flex; flex-direction: column; justify-content: center; line-height: 1; }
+.logo-great { font-size: 9px; letter-spacing: 0.35em; color: var(--brown-lt); text-transform: uppercase; margin-bottom: 1px; }
+.logo-penn { font-family: "Cormorant Garamond", serif; font-size: 30px; font-weight: 700; background: linear-gradient(135deg, #B86A2A 0%, #2A8FA5 55%, #E8C87A 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.05; }
+.logo-bot { display: flex; align-items: baseline; gap: 16px; margin-top: 1px; }
+.logo-migration { font-size: 9px; letter-spacing: 0.35em; color: var(--brown-lt); text-transform: uppercase; }
+.logo-nv { font-size: 9px; letter-spacing: 0.22em; color: var(--copper-lt); text-transform: uppercase; }
+.header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.disclaimer { font-size: 10px; color: #bbb; white-space: nowrap; }
+.export-btn { font-size: 11px; padding: 6px 13px; border-radius: 6px; border: 1px solid var(--border-md); background: none; cursor: pointer; color: var(--copper); font-weight: 600; transition: all 0.15s; }
+.export-btn:hover { background: var(--sand); border-color: var(--copper); }
+.tab-bar { display: flex; padding: 0 20px; border-top: 1px solid var(--border); }
+.tab-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 7px 16px; font-size: 13px; font-weight: 500; color: var(--brown-lt); cursor: pointer; transition: all 0.15s; }
+.tab-btn.active { color: var(--copper); border-bottom-color: var(--copper); font-weight: 600; }
+
+/* PAGES */
+.page { display: none; flex: 1; overflow: hidden; }
+.page.active { display: flex; }
+.leaflet-container { background: #ddd; }
+.leaflet-popup-content { margin: 0; }
+.leaflet-popup-content-wrapper { border-radius: 10px !important; padding: 0 !important; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.22) !important; }
+
+/* LOADING STATE */
+.loading-overlay { position: fixed; inset: 0; background: var(--sand); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 14px; transition: opacity 0.3s; }
+.loading-overlay.hidden { opacity: 0; pointer-events: none; }
+.loading-spinner { width: 32px; height: 32px; border: 3px solid var(--border-md); border-top-color: var(--copper); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.loading-text { font-size: 12px; color: var(--brown-lt); letter-spacing: 0.1em; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* COMMUNITY SIDEBAR (page 1) */
+.side { width: 286px; min-width: 286px; display: flex; flex-direction: column; background: var(--sand-mid); border-right: 1px solid var(--border-md); overflow: hidden; }
+.filters { display: flex; gap: 5px; padding: 9px 10px; border-bottom: 1px solid var(--border-md); background: var(--sand-dk); flex-shrink: 0; }
+.fbtn { font-size: 11px; padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border-md); background: #fff; cursor: pointer; color: var(--brown-lt); font-weight: 500; transition: all 0.15s; }
+.fbtn.on { background: var(--copper); color: #fff; border-color: var(--copper); }
+.clist { flex: 1; overflow-y: auto; padding: 8px; }
+.cc { border-radius: 10px; border: 1px solid var(--border); margin-bottom: 9px; cursor: pointer; background: #fff; overflow: hidden; transition: all 0.15s; }
+.cc:hover { border-color: var(--border-str); box-shadow: 0 3px 12px rgba(184,106,42,0.12); }
+.cc.on { border: 2px solid var(--copper); box-shadow: 0 4px 16px rgba(184,106,42,0.2); }
+.cc-photo { height: 86px; background-size: cover; background-position: center; background-color: var(--sand-dk); position: relative; }
+.cc-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(74,38,8,0.6) 0%, transparent 58%); }
+.cc-body { padding: 10px 12px 11px; }
+.cc-head { display: flex; align-items: center; gap: 7px; margin-bottom: 2px; }
+.cdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cc-name { font-size: 13px; font-weight: 700; color: var(--brown); }
+.cc-sub { font-size: 10px; color: var(--brown-lt); margin-bottom: 5px; font-weight: 500; }
+.cc-desc { font-size: 11px; color: var(--brown-lt); line-height: 1.45; margin-bottom: 6px; }
+.tags { display: flex; flex-wrap: wrap; gap: 3px; }
+.tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--sand-mid); color: var(--brown); border: 1px solid var(--border); }
+.cc-foot { font-size: 10px; color: var(--copper-lt); margin-top: 6px; font-style: italic; }
+.mwrap { flex: 1; position: relative; }
+#m1, #m2 { width: 100%; height: 100%; }
+.hint { font-size: 10px; color: var(--brown-lt); padding: 6px 12px; border-top: 1px solid var(--border-md); flex-shrink: 0; text-align: center; background: var(--sand-dk); }
+
+/* COMPARISON PAGE */
+.comp-side { width: 300px; min-width: 300px; display: flex; flex-direction: column; background: var(--sand-mid); border-right: 1px solid var(--border-md); overflow: hidden; }
+.comp-top { padding: 8px 10px; border-bottom: 1px solid var(--border-md); background: var(--sand-dk); flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; }
+.comp-top-label { font-size: 11px; color: var(--brown-lt); font-weight: 600; }
+.saved-badge { font-size: 10px; color: #5a9e5a; opacity: 0; transition: opacity 0.3s; font-weight: 600; }
+.saved-badge.show { opacity: 1; }
+.comp-list { flex: 1; overflow-y: scroll; padding: 7px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; scrollbar-color: rgba(184,106,42,0.4) transparent; }
+
+/* COMPACT PROPERTY CARDS */
+.hc { border-radius: 9px; border: 1px solid var(--border-md); background: #fff; cursor: pointer; transition: all 0.15s; padding: 0; overflow: hidden; min-height: 120px; }
+.hc:hover { border-color: var(--border-str); box-shadow: 0 3px 10px rgba(184,106,42,0.14); }
+.hc.on { border: 2px solid var(--copper); box-shadow: 0 4px 14px rgba(184,106,42,0.22); }
+.hc-inner { display: flex; align-items: flex-start; gap: 0; }
+.hc-thumb-col { width: 76px; min-width: 76px; height: 76px; position: relative; background: var(--sand-mid); flex-shrink: 0; overflow: hidden; margin: 8px 0 8px 8px; border-radius: 7px; }
+.hc-thumb { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.hc-thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--sand-mid); }
+.hc-upload-label { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.92); border: 1px solid var(--border-md); border-radius: 4px; padding: 2px 5px; font-size: 9px; color: var(--copper); cursor: pointer; font-weight: 600; white-space: nowrap; z-index: 2; }
+.hc-upload-label input { display: none; }
+.hc-comm-bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+/* Two-photo toggle button */
+.hc-photo-toggle { position: absolute; top: 5px; right: 4px; background: rgba(255,255,255,0.92); border: 1px solid var(--border-md); border-radius: 4px; padding: 1px 4px; font-size: 10px; cursor: pointer; color: var(--turquoise); z-index: 2; line-height: 1.4; font-weight: 700; transition: all 0.15s; }
+.hc-photo-toggle:hover { background: #fff; border-color: var(--turquoise); }
+.hc-details { flex: 1; padding: 8px 10px 9px; display: flex; flex-direction: column; gap: 0; min-width: 0; overflow: hidden; min-height: 120px; }
+.hc-addr { font-size: 11px; font-weight: 700; color: #2a1000; line-height: 1.3; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hc-meta { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; flex-wrap: wrap; }
+.bdg { font-size: 9px; padding: 1px 5px; border-radius: 3px; font-weight: 600; white-space: nowrap; }
+.hc-price-line { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
+.hc-price { font-size: 15px; font-weight: 700; color: var(--copper); line-height: 1; }
+.hc-dom { font-size: 9px; color: var(--brown-lt); }
+.hc-stats-line { font-size: 10px; color: var(--brown-lt); margin-bottom: 5px; font-weight: 500; }
+.hc-feats { display: flex; flex-wrap: wrap; gap: 2px; margin-bottom: 6px; }
+.feat { font-size: 9px; padding: 1px 5px; border-radius: 8px; background: var(--sand); color: var(--brown); border: 1px solid var(--border); white-space: nowrap; }
+.stars { display: flex; gap: 2px; margin-bottom: 6px; }
+.star { font-size: 15px; cursor: pointer; color: var(--sand-dk); line-height: 1; transition: color 0.1s, transform 0.1s; }
+.star.lit { color: var(--gold); }
+.star:hover { color: var(--copper-lt); transform: scale(1.15); }
+.hnotes { width: 100%; font-size: 10px; border: 1px solid var(--border-md); border-radius: 5px; padding: 4px 7px; resize: none; height: 38px; background: var(--sand-lt); color: var(--brown); font-family: inherit; outline: none; transition: border-color 0.15s; line-height: 1.4; }
+.hnotes:focus { border-color: var(--copper); background: #fff; }
+.hnotes::placeholder { color: var(--sand-dk); font-style: italic; }
+.zlink { display: block; text-align: center; font-size: 9px; margin-top: 5px; padding: 4px 0; border-radius: 5px; border: 1px solid rgba(42,143,165,0.35); color: var(--turquoise); text-decoration: none; font-weight: 600; background: rgba(42,143,165,0.05); transition: all 0.15s; }
+.zlink:hover { background: rgba(42,143,165,0.12); border-color: var(--turquoise); }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-str); border-radius: 2px; }
+
+/* FOOTER */
+.app-footer { flex-shrink: 0; text-align: center; padding: 4px; background: var(--sand-dk); border-top: 1px solid var(--border); }
+.import-link { font-size: 10px; color: var(--brown-lt); cursor: pointer; text-decoration: none; background: none; border: none; padding: 0; font-family: inherit; opacity: 0.7; transition: opacity 0.15s; }
+.import-link:hover { opacity: 1; color: var(--copper); }
+
+/* ZILLOW IMPORT PANEL */
+.import-backdrop { display: none; position: fixed; inset: 0; background: rgba(74,38,8,0.45); z-index: 1000; align-items: flex-end; justify-content: center; }
+.import-backdrop.open { display: flex; }
+.import-panel { background: #fff; border-radius: 14px 14px 0 0; width: 100%; max-width: 760px; padding: 24px 28px 28px; box-shadow: 0 -8px 40px rgba(74,38,8,0.22); max-height: 90vh; overflow-y: auto; }
+.import-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.import-panel-title { font-size: 15px; font-weight: 700; color: var(--brown); }
+.import-panel-sub { font-size: 11px; color: var(--brown-lt); margin-top: 2px; }
+.import-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--brown-lt); line-height: 1; padding: 2px 6px; border-radius: 5px; }
+.import-close:hover { background: var(--sand); }
+.import-body { display: flex; gap: 20px; }
+.import-left { flex: 1; min-width: 0; }
+.import-right { width: 260px; min-width: 260px; }
+.drop-zone { border: 2px dashed var(--border-md); border-radius: 10px; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all 0.15s; background: var(--sand-lt); padding: 16px; text-align: center; position: relative; }
+.drop-zone.drag-over { border-color: var(--turquoise); background: rgba(42,143,165,0.06); }
+.drop-zone img { max-width: 100%; max-height: 160px; object-fit: contain; border-radius: 6px; }
+.drop-zone-hint { font-size: 11px; color: var(--brown-lt); }
+.drop-zone-icon { font-size: 28px; opacity: 0.4; }
+.drop-zone input[type=file] { display: none; }
+.import-extract-btn { width: 100%; margin-top: 10px; padding: 9px; border-radius: 8px; border: none; background: var(--copper); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+.import-extract-btn:hover { background: var(--copper-dk); }
+.import-extract-btn:disabled { background: var(--sand-dk); color: var(--brown-lt); cursor: not-allowed; }
+.import-fields { display: flex; flex-direction: column; gap: 8px; }
+.import-field { display: flex; flex-direction: column; gap: 3px; }
+.import-field label { font-size: 10px; font-weight: 600; color: var(--brown-lt); text-transform: uppercase; letter-spacing: 0.06em; }
+.import-field input { border: 1px solid var(--border-md); border-radius: 6px; padding: 6px 9px; font-size: 12px; color: var(--brown); background: var(--sand-lt); font-family: inherit; outline: none; transition: border-color 0.15s; }
+.import-field input:focus { border-color: var(--copper); background: #fff; }
+.import-field-row { display: flex; gap: 8px; }
+.import-field-row .import-field { flex: 1; }
+.import-status { font-size: 11px; margin-top: 6px; min-height: 18px; color: var(--brown-lt); font-style: italic; }
+.import-status.error { color: #c0392b; font-style: normal; }
+.import-copy-btn { width: 100%; margin-top: 12px; padding: 9px; border-radius: 8px; border: 1px solid var(--border-md); background: none; color: var(--turquoise); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.import-copy-btn:hover { background: rgba(42,143,165,0.08); border-color: var(--turquoise); }
+.import-output { margin-top: 10px; background: #F7F2EA; border: 1px solid var(--border-md); border-radius: 8px; padding: 10px 12px; font-size: 10px; font-family: "SF Mono", "Fira Code", monospace; color: var(--brown); white-space: pre; overflow-x: auto; display: none; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Loading properties...</div>
+</div>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">
+      <div class="logo-bar"></div>
+      <div class="logo-text">
+        <div class="logo-great">The Great</div>
+        <div class="logo-penn">Pennington</div>
+        <div class="logo-bot">
+          <div class="logo-migration">Migration</div>
+          <div class="logo-nv">Nevada &nbsp;·&nbsp; 2026</div>
+        </div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="disclaimer">* Prices estimated — verify on Zillow</span>
+      <button class="export-btn" onclick="exportNotes()">Export notes ↓</button>
+    </div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="gTab(0)">Community explorer</button>
+    <button class="tab-btn" onclick="gTab(1)">Comparison tracker</button>
+  </div>
+</div>
+
+<div id="pg0" class="page active">
+  <div class="side">
+    <div class="filters">
+      <button class="fbtn on" onclick="fDay('all',this)">All</button>
+      <button class="fbtn" onclick="fDay('W',this)">Wednesday</button>
+      <button class="fbtn" onclick="fDay('T',this)">Thursday</button>
+    </div>
+    <div class="clist" id="clist"></div>
+    <div class="hint">Click a community to zoom &amp; filter the map</div>
+  </div>
+  <div class="mwrap"><div id="m1"></div></div>
+</div>
+
+<div id="pg1" class="page">
+  <div class="comp-side">
+    <div class="comp-top">
+      <span class="comp-top-label" id="rated-count">Loading...</span>
+      <span class="saved-badge" id="saved-ind">Saved ✓</span>
+    </div>
+    <div class="comp-list" id="cgrid"></div>
+  </div>
+  <div class="mwrap"><div id="m2"></div></div>
+</div>
+
+<footer class="app-footer">
+  <button class="import-link" onclick="openImport()">⚙ Zillow import tool</button>
+</footer>
+
+<!-- Zillow Import Panel -->
+<div class="import-backdrop" id="import-backdrop" onclick="closeImportIfBackdrop(event)">
+  <div class="import-panel">
+    <div class="import-panel-head">
+      <div>
+        <div class="import-panel-title">Zillow Screenshot Import</div>
+        <div class="import-panel-sub">Paste or drop a Zillow listing screenshot to extract details into a JSON snippet.</div>
+      </div>
+      <button class="import-close" onclick="closeImport()">×</button>
+    </div>
+    <div class="import-body">
+      <div class="import-left">
+        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('img-input').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+          <div class="drop-zone-icon" id="dz-icon">🏠</div>
+          <div class="drop-zone-hint" id="dz-hint">Click to choose screenshot<br>or drag and drop</div>
+          <img id="dz-preview" style="display:none">
+          <input type="file" id="img-input" accept="image/*" onchange="handleFileSelect(this.files[0])">
+        </div>
+        <button class="import-extract-btn" id="extract-btn" onclick="runExtract()" disabled>Extract listing details</button>
+        <div class="import-status" id="import-status"></div>
+      </div>
+      <div class="import-right">
+        <div class="import-fields">
+          <div class="import-field">
+            <label>Address</label>
+            <input type="text" id="if-address" placeholder="Street address">
+          </div>
+          <div class="import-field">
+            <label>Price</label>
+            <input type="text" id="if-price" placeholder="$000,000">
+          </div>
+          <div class="import-field-row">
+            <div class="import-field">
+              <label>Beds</label>
+              <input type="text" id="if-beds" placeholder="4">
+            </div>
+            <div class="import-field">
+              <label>Baths</label>
+              <input type="text" id="if-baths" placeholder="3">
+            </div>
+          </div>
+          <div class="import-field-row">
+            <div class="import-field">
+              <label>Sqft</label>
+              <input type="text" id="if-sqft" placeholder="2500">
+            </div>
+            <div class="import-field">
+              <label>Days listed</label>
+              <input type="text" id="if-dom" placeholder="14">
+            </div>
+          </div>
+        </div>
+        <button class="import-copy-btn" id="copy-btn" onclick="copySnippet()">Copy JSON snippet</button>
+        <pre class="import-output" id="import-output"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+
+/* ============================================================
+   DATA & STATE
+   ============================================================ */
+let C = [];   // communities array, populated from fetch
+const st = { day:'all', sc:null, sh:null, R:{}, N:{}, photos:{}, p2:{} };
+let m1, m2, mk1={}, mk2={};
+
+/* ============================================================
+   BOOTSTRAP — fetch JSON, then init
+   ============================================================ */
+fetch('data/properties.json')
+  .then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(data => {
+    C = data.communities;
+    loadSaved();
+    rClist();
+    rGrid();
+    iM1();
+    iM2();
+    document.getElementById('loading').classList.add('hidden');
+    setTimeout(() => document.getElementById('loading').remove(), 400);
+  })
+  .catch(err => {
+    document.querySelector('.loading-text').textContent = 'Could not load properties.json — ' + err.message;
+  });
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function flat() {
+  return C.flatMap(c => c.properties.map(h => ({
+    ...h,
+    cid: c.id,
+    cn:  c.name,
+    clr: c.color,
+    dk:  c.colorDark,
+    d:   c.day,
+    cphoto: c.photo   // community fallback photo
+  })));
+}
+
+function totalCount() { return flat().length; }
+
+/* ============================================================
+   PERSISTENCE
+   ============================================================ */
+function loadSaved() {
+  try { const r = localStorage.getItem('penn26_R'); if (r) st.R = JSON.parse(r); } catch(e) {}
+  try { const n = localStorage.getItem('penn26_N'); if (n) st.N = JSON.parse(n); } catch(e) {}
+  try { const p = localStorage.getItem('penn26_P'); if (p) st.photos = JSON.parse(p); } catch(e) {}
+}
+function flash() {
+  const el = document.getElementById('saved-ind');
+  if (el) { el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 1800); }
+}
+function saveR() { try { localStorage.setItem('penn26_R', JSON.stringify(st.R)); } catch(e) {} }
+function saveN() { try { localStorage.setItem('penn26_N', JSON.stringify(st.N)); } catch(e) {} flash(); }
+function saveP() { try { localStorage.setItem('penn26_P', JSON.stringify(st.photos)); } catch(e) {} flash(); }
+
+function compressPhoto(id, file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const maxW = 500; const scale = Math.min(1, maxW / img.width);
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      st.photos[id] = canvas.toDataURL('image/jpeg', 0.78);
+      saveP(); rGrid();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ============================================================
+   PHOTO TOGGLE (two-photo per card)
+   ============================================================ */
+function togglePhoto(id, evt) {
+  if (evt) evt.stopPropagation();
+  st.p2[id] = !st.p2[id];
+  // Update just the thumbnail image & toggle button label for the card
+  const col = document.getElementById('thumb-col-' + id);
+  if (!col) return;
+  const img = col.querySelector('.hc-thumb');
+  const btn = col.querySelector('.hc-photo-toggle');
+  const h = flat().find(x => x.id === id);
+  if (!h) return;
+  const userPhoto = st.photos[id];
+  const displayPhoto = userPhoto
+    ? userPhoto
+    : (st.p2[id] && h.photo2 ? h.photo2 : (h.photo || h.cphoto));
+  if (img) {
+    img.src = displayPhoto || '';
+    img.onerror = function() { if (this.src !== h.cphoto) this.src = h.cphoto || ''; };
+  }
+  if (btn) btn.textContent = st.p2[id] ? '1' : '2';
+}
+
+function getDisplayPhoto(h) {
+  if (st.photos[h.id]) return st.photos[h.id];
+  if (st.p2[h.id] && h.photo2) return h.photo2;
+  return h.photo || h.cphoto;
+}
+
+/* ============================================================
+   COMMUNITY EXPLORER (page 1)
+   ============================================================ */
+function rClist() {
+  const dn = { W:'Wednesday', T:'Thursday' };
+  const list = st.day === 'all' ? C : C.filter(c => c.day === st.day);
+  document.getElementById('clist').innerHTML = list.map(c => `
+    <div class="cc${st.sc === c.id ? ' on' : ''}" style="${st.sc === c.id ? 'border-color:' + c.colorDark + ';' : ''}" onclick="pC('${c.id}')">
+      <div class="cc-photo" style="background-image:url('${c.photo}')"><div class="cc-overlay"></div></div>
+      <div class="cc-body">
+        <div class="cc-head"><div class="cdot" style="background:${c.color}"></div><span class="cc-name">${c.name}</span></div>
+        <div class="cc-sub">${dn[c.day]} &nbsp;·&nbsp; HOA ${c.hoa}</div>
+        <div class="cc-desc">${c.desc}</div>
+        <div class="tags">${c.amenities.map(a => `<span class="tag">${a}</span>`).join('')}</div>
+        <div class="cc-foot">${c.properties.length} home${c.properties.length !== 1 ? 's' : ''} on your list</div>
+      </div>
+    </div>`).join('');
+}
+
+function pC(id) {
+  st.sc = st.sc === id ? null : id; rClist(); uM1();
+  if (st.sc) { const c = C.find(x => x.id === id); m1.flyTo(c.center, c.zoom, {duration:0.7}); }
+  else m1.flyTo(dCtr(), dZ(), {duration:0.7});
+}
+function dCtr() { return st.day === 'T' ? [36.02,-115.00] : st.day === 'W' ? [36.292,-115.300] : [36.17,-115.15]; }
+function dZ()   { return st.day === 'all' ? 10 : 12; }
+function fDay(d, btn) {
+  st.day = d; st.sc = null;
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on'); rClist(); uM1(); m1.flyTo(dCtr(), dZ(), {duration:0.7});
+}
+function uM1() {
+  flat().forEach(h => {
+    if (!mk1[h.id]) return;
+    const v = (st.day === 'all' || h.d === st.day) && (!st.sc || h.cid === st.sc);
+    mk1[h.id].setOpacity(v ? 1 : 0.1);
+  });
+}
+function iM1() {
+  m1 = L.map('m1').setView([36.17,-115.15], 10);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    {attribution:'© OpenStreetMap © CartoDB', maxZoom:18}).addTo(m1);
+  flat().forEach(h => {
+    const comm = C.find(c => c.id === h.cid);
+    mk1[h.id] = L.marker([h.lat, h.lng], {icon: mIcon(h.clr)}).addTo(m1)
+      .bindPopup(() => makePopup(h, comm), {maxWidth:300, minWidth:276});
+  });
+  const leg = L.control({position:'bottomleft'});
+  leg.onAdd = () => {
+    const d = L.DomUtil.create('div');
+    d.style.cssText = 'background:rgba(255,255,255,0.97);border:1px solid rgba(184,106,42,0.28);border-radius:9px;padding:8px 13px;font-size:11px;font-family:sans-serif;line-height:2;pointer-events:none;box-shadow:0 3px 14px rgba(184,106,42,0.14);';
+    d.innerHTML = C.map(c => `<div style="display:flex;align-items:center;gap:7px;color:#4A2608;font-weight:500;"><div style="width:9px;height:9px;border-radius:50%;background:${c.color};flex-shrink:0;"></div>${c.name}</div>`).join('');
+    return d;
+  };
+  leg.addTo(m1);
+}
+
+/* ============================================================
+   COMPARISON TRACKER (page 2)
+   ============================================================ */
+function rGrid() {
+  const homes = flat();
+  const n = Object.keys(st.R).length;
+  const total = homes.length;
+  document.getElementById('rated-count').textContent = n ? `${n} of ${total} rated` : `${total} properties`;
+  document.getElementById('cgrid').innerHTML = homes.map(h => {
+    const r = st.R[h.id] || 0;
+    const photo = getDisplayPhoto(h);
+    const hasToggle = !st.photos[h.id] && h.photo2;
+    return `<div class="hc${st.sh === h.id ? ' on' : ''}" style="${st.sh === h.id ? 'border-color:' + h.dk + ';' : ''}" onclick="pH('${h.id}')">
+      <div class="hc-inner">
+        <div class="hc-thumb-col" id="thumb-col-${h.id}">
+          <div class="hc-comm-bar" style="background:${h.clr};"></div>
+          <img class="hc-thumb" src="${photo}" onerror="if(this.src!=='${h.cphoto}')this.src='${h.cphoto}'" alt="" style="margin-top:3px;height:calc(100% - 3px);">
+          ${hasToggle ? `<button class="hc-photo-toggle" onclick="togglePhoto('${h.id}',event)" title="Toggle photo">${st.p2[h.id] ? '1' : '2'}</button>` : ''}
+          <label class="hc-upload-label" onclick="event.stopPropagation()">
+            &#128247;
+            <input type="file" accept="image/*" style="display:none" onchange="compressPhoto('${h.id}',this.files[0])">
+          </label>
+        </div>
+        <div class="hc-details">
+          <div class="hc-addr" title="${h.address}">${h.address}</div>
+          <div class="hc-meta">
+            <span class="bdg" style="background:${h.clr}22;color:${h.dk}">${h.cn}</span>
+            <span class="bdg" style="background:#EFE8DB;color:#7A4A20">${h.d === 'W' ? 'Wed 4/15' : 'Thu 4/16'}</span>
+          </div>
+          <div class="hc-price-line">
+            <span class="hc-price">${h.price}</span>
+            <span class="hc-dom">${h.dom}d listed</span>
+          </div>
+          <div class="hc-stats-line">${h.beds}bd &nbsp;·&nbsp; ${h.baths}ba &nbsp;·&nbsp; ${h.sqft.toLocaleString()} sqft</div>
+          <div class="hc-feats">${h.features.slice(0,3).map(f => `<span class="feat">${f}</span>`).join('')}</div>
+          <div class="stars" id="sr${h.id}">${[1,2,3,4,5].map(n => `<span class="star${r >= n ? ' lit' : ''}" onclick="event.stopPropagation();setR('${h.id}',${n})">&#9733;</span>`).join('')}</div>
+          <textarea class="hnotes" placeholder="Tour notes..." onclick="event.stopPropagation()" oninput="setN('${h.id}',this.value)">${st.N[h.id] || ''}</textarea>
+          <a class="zlink" href="${h.zillow}" target="_blank" onclick="event.stopPropagation()">View on Zillow →</a>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function pH(id) {
+  st.sh = st.sh === id ? null : id; rGrid();
+  if (st.sh && mk2[id]) {
+    const h = flat().find(x => x.id === id);
+    m2.flyTo([h.lat, h.lng], 15, {duration:0.6});
+    Object.values(mk2).forEach(m => m.setOpacity(0.15));
+    mk2[id].setOpacity(1).openPopup();
+  } else {
+    Object.values(mk2).forEach(m => m.setOpacity(1));
+    m2.flyTo([36.17,-115.15], 10, {duration:0.6});
+  }
+}
+function setR(id, n) {
+  st.R[id] = n; saveR();
+  document.querySelectorAll('#sr' + id + ' .star').forEach((s, i) => s.classList.toggle('lit', i < n));
+  const total = Object.keys(st.R).length;
+  const count = flat().length;
+  document.getElementById('rated-count').textContent = total ? `${total} of ${count} rated` : `${count} properties`;
+}
+function setN(id, v) { st.N[id] = v; saveN(); }
+
+function iM2() {
+  m2 = L.map('m2').setView([36.17,-115.15], 10);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    {attribution:'© OpenStreetMap © CartoDB', maxZoom:18}).addTo(m2);
+  flat().forEach(h => {
+    mk2[h.id] = L.marker([h.lat, h.lng], {icon: mIcon(h.clr)}).addTo(m2)
+      .bindPopup(`<div style="font-family:sans-serif;padding:2px;"><b style="color:#4A2608;font-size:12px;">${h.address}</b><br><span style="color:#7A4A20;font-size:11px;">${h.cn} · ${h.price}</span></div>`, {maxWidth:190});
+  });
+  const leg = L.control({position:'bottomleft'});
+  leg.onAdd = () => {
+    const d = L.DomUtil.create('div');
+    d.style.cssText = 'background:rgba(255,255,255,0.97);border:1px solid rgba(184,106,42,0.28);border-radius:9px;padding:8px 13px;font-size:11px;font-family:sans-serif;line-height:2;pointer-events:none;box-shadow:0 3px 14px rgba(184,106,42,0.14);';
+    d.innerHTML = C.map(c => `<div style="display:flex;align-items:center;gap:7px;color:#4A2608;font-weight:500;"><div style="width:9px;height:9px;border-radius:50%;background:${c.color};flex-shrink:0;"></div>${c.name}</div>`).join('');
+    return d;
+  };
+  leg.addTo(m2);
+}
+
+/* ============================================================
+   SHARED MAP HELPERS
+   ============================================================ */
+function mIcon(clr) {
+  const s = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="28" viewBox="0 0 22 28"><path d="M11 0C4.9 0 0 4.9 0 11c0 8.3 11 17 11 17S22 19.3 22 11C22 4.9 17.1 0 11 0z" fill="${clr}" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/><circle cx="11" cy="11" r="4.5" fill="rgba(255,255,255,0.45)"/></svg>`;
+  return L.divIcon({html:s, iconSize:[22,28], iconAnchor:[11,28], popupAnchor:[0,-30], className:''});
+}
+
+function makePopup(h, comm) {
+  const photo = getDisplayPhoto(h);
+  return `<div style="font-family:-apple-system,sans-serif;width:274px;">
+    <div style="height:140px;background:url('${photo}') center/cover;background-color:#D8CAAF;position:relative;">
+      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(74,38,8,0.65) 0%,transparent 55%);"></div>
+      <div style="position:absolute;bottom:9px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-end;">
+        <span style="font-size:17px;font-weight:700;color:#fff;text-shadow:0 1px 5px rgba(0,0,0,0.5);">${h.price}</span>
+        <span style="font-size:10px;background:rgba(255,255,255,0.2);color:#fff;padding:2px 9px;border-radius:10px;">${h.dom} days listed</span>
+      </div>
+    </div>
+    <div style="padding:12px 14px 14px;background:#fff;">
+      <div style="font-size:13px;font-weight:700;color:#4A2608;line-height:1.3;margin-bottom:3px;">${h.address}</div>
+      <div style="font-size:11px;color:#7A4A20;margin-bottom:9px;display:flex;align-items:center;gap:5px;">
+        <span style="width:7px;height:7px;border-radius:50%;background:${comm.color};display:inline-block;flex-shrink:0;"></span>
+        ${comm.name} &nbsp;·&nbsp; ${h.d === 'W' ? 'Wednesday 4/15' : 'Thursday 4/16'}
+      </div>
+      <div style="display:flex;background:#EFE8DB;border-radius:7px;overflow:hidden;margin-bottom:9px;border:1px solid rgba(184,106,42,0.2);">
+        <div style="flex:1;padding:7px 0;text-align:center;border-right:1px solid rgba(184,106,42,0.18);"><div style="font-size:16px;font-weight:700;color:#4A2608;">${h.beds}</div><div style="font-size:9px;color:#7A4A20;text-transform:uppercase;letter-spacing:0.06em;">Beds</div></div>
+        <div style="flex:1;padding:7px 0;text-align:center;border-right:1px solid rgba(184,106,42,0.18);"><div style="font-size:16px;font-weight:700;color:#4A2608;">${h.baths}</div><div style="font-size:9px;color:#7A4A20;text-transform:uppercase;letter-spacing:0.06em;">Baths</div></div>
+        <div style="flex:1;padding:7px 0;text-align:center;"><div style="font-size:16px;font-weight:700;color:#4A2608;">${(h.sqft/1000).toFixed(1)}k</div><div style="font-size:9px;color:#7A4A20;text-transform:uppercase;letter-spacing:0.06em;">Sqft</div></div>
+      </div>
+      <div style="margin-bottom:10px;line-height:2.2;">${h.features.map(f => `<span style="display:inline-block;font-size:10px;background:#EFE8DB;color:#4A2608;padding:1px 7px;border-radius:10px;margin:1px 2px 1px 0;border:1px solid rgba(184,106,42,0.2);font-weight:500;">${f}</span>`).join('')}</div>
+      <a href="${h.zillow}" target="_blank" style="display:block;text-align:center;font-size:12px;color:#2A8FA5;text-decoration:none;border:1px solid rgba(42,143,165,0.4);border-radius:7px;padding:7px;background:rgba(42,143,165,0.05);font-weight:600;">View on Zillow →</a>
+      <div style="font-size:9px;color:#ccc;text-align:center;margin-top:6px;">* Prices estimated — verify on Zillow</div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   EXPORT
+   ============================================================ */
+function exportNotes() {
+  const homes = flat();
+  let txt = 'PENNINGTON HOUSE TOUR NOTES\nApril 15-16, 2026 | Las Vegas & Henderson, NV\n';
+  txt += 'Generated: ' + new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'}) + '\n';
+  txt += '============================================\n\n';
+  const rated   = homes.filter(h =>  st.R[h.id] || st.N[h.id]);
+  const unrated = homes.filter(h => !st.R[h.id] && !st.N[h.id]);
+  if (rated.length) {
+    txt += 'REVIEWED\n\n';
+    rated.forEach(h => {
+      const r = st.R[h.id] || 0;
+      txt += h.cn + ' | ' + h.address + '\n';
+      txt += h.price + ' | ' + h.beds + 'bd/' + h.baths + 'ba | ' + h.sqft.toLocaleString() + ' sqft | ' + h.dom + ' days\n';
+      txt += 'Rating: ' + '★'.repeat(r) + '☆'.repeat(5-r) + '\n';
+      txt += 'Notes: ' + (st.N[h.id] || '(none)') + '\n';
+      txt += h.zillow + '\n\n';
+    });
+  }
+  if (unrated.length) {
+    txt += '\nNOT YET REVIEWED\n';
+    unrated.forEach(h => { txt += h.cn + ' | ' + h.address + ' | ' + h.price + '\n'; });
+  }
+  const b = new Blob([txt], {type:'text/plain'});
+  const u = URL.createObjectURL(b);
+  const a = document.createElement('a');
+  a.href = u; a.download = 'pennington-tour-notes.txt'; a.click(); URL.revokeObjectURL(u);
+}
+
+/* ============================================================
+   TAB SWITCHING
+   ============================================================ */
+function gTab(n) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === n));
+  document.querySelectorAll('.page').forEach((p, i) => p.classList.toggle('active', i === n));
+  if (n === 0 && m1) setTimeout(() => m1.invalidateSize(), 60);
+  if (n === 1 && m2) setTimeout(() => m2.invalidateSize(), 60);
+}
+
+/* ============================================================
+   ZILLOW IMPORT PANEL
+   ============================================================ */
+let importImageBase64 = null;
+
+function openImport() {
+  document.getElementById('import-backdrop').classList.add('open');
+}
+function closeImport() {
+  document.getElementById('import-backdrop').classList.remove('open');
+}
+function closeImportIfBackdrop(e) {
+  if (e.target === document.getElementById('import-backdrop')) closeImport();
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.add('drag-over');
+}
+function handleDragLeave(e) {
+  document.getElementById('drop-zone').classList.remove('drag-over');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) handleFileSelect(file);
+}
+
+function handleFileSelect(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    importImageBase64 = dataUrl.split(',')[1];
+    const preview = document.getElementById('dz-preview');
+    preview.src = dataUrl;
+    preview.style.display = 'block';
+    document.getElementById('dz-icon').style.display = 'none';
+    document.getElementById('dz-hint').style.display = 'none';
+    document.getElementById('extract-btn').disabled = false;
+    document.getElementById('import-status').textContent = 'Image ready. Click Extract to pull listing details.';
+    document.getElementById('import-status').className = 'import-status';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function runExtract() {
+  if (!importImageBase64) return;
+  const btn = document.getElementById('extract-btn');
+  const status = document.getElementById('import-status');
+  btn.disabled = true;
+  btn.textContent = 'Extracting...';
+  status.textContent = 'Calling Claude vision API...';
+  status.className = 'import-status';
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: 'image/jpeg', data: importImageBase64 }
+            },
+            {
+              type: 'text',
+              text: 'Extract from this Zillow listing screenshot: address, price, beds, baths, sqft, days on market. Return ONLY valid JSON with exactly these keys: address, price, beds, baths, sqft, dom. No markdown, no explanation — raw JSON only. For price include the dollar sign. For beds/baths/sqft/dom return numbers only.'
+            }
+          ]
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || 'HTTP ' + response.status);
+    }
+
+    const data = await response.json();
+    const text = data.content.map(b => b.text || '').join('').trim();
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    // Populate fields
+    document.getElementById('if-address').value = parsed.address || '';
+    document.getElementById('if-price').value   = parsed.price   || '';
+    document.getElementById('if-beds').value    = parsed.beds    || '';
+    document.getElementById('if-baths').value   = parsed.baths   || '';
+    document.getElementById('if-sqft').value    = parsed.sqft    || '';
+    document.getElementById('if-dom').value     = parsed.dom     || '';
+
+    status.textContent = 'Extracted! Edit any fields, then copy the snippet.';
+    status.className = 'import-status';
+    buildSnippet();
+  } catch(err) {
+    status.textContent = 'Error: ' + err.message;
+    status.className = 'import-status error';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Extract listing details';
+  }
+}
+
+function buildSnippet() {
+  const snippet = {
+    id: 'hXX',
+    address:  document.getElementById('if-address').value,
+    lat: 0,
+    lng: 0,
+    zillow: '',
+    price:   document.getElementById('if-price').value,
+    beds:    Number(document.getElementById('if-beds').value)   || 0,
+    baths:   Number(document.getElementById('if-baths').value)  || 0,
+    sqft:    Number(document.getElementById('if-sqft').value)   || 0,
+    dom:     Number(document.getElementById('if-dom').value)    || 0,
+    features: [],
+    photo: '',
+    photo2: ''
+  };
+  const json = JSON.stringify(snippet, null, 2);
+  document.getElementById('import-output').textContent = json;
+  document.getElementById('import-output').style.display = 'block';
+}
+
+function copySnippet() {
+  buildSnippet();
+  const text = document.getElementById('import-output').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy JSON snippet', 2000);
+  });
+}
+
+// Rebuild snippet on any field edit
+['if-address','if-price','if-beds','if-baths','if-sqft','if-dom'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', () => {
+    if (document.getElementById('import-output').style.display === 'block') buildSnippet();
+  });
+});
+
+// Keyboard shortcut: Escape closes import panel
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeImport();
+});
+
+// Paste image support (Ctrl+V anywhere)
+document.addEventListener('paste', e => {
+  if (!document.getElementById('import-backdrop').classList.contains('open')) return;
+  const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'));
+  if (item) handleFileSelect(item.getAsFile());
+});
+</script>
+</body>
+</html>
