@@ -123,11 +123,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
   height: 3px;
   z-index: 2;
 }
+/* div instead of img: explicit dimensions NEVER collapse regardless of load failures */
 .hc-thumb {
-  display: block;
   width: 76px;
   height: 76px;
-  object-fit: cover;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--sand-mid);
+  flex-shrink: 0;
 }
 
 /* Nav overlay buttons — absolute on top of image */
@@ -580,7 +583,7 @@ function rGrid() {
       <div class="hc-inner">
         <div class="hc-thumb-col" id="tc-${h.id}">
           <div class="hc-comm-bar" style="background:${h.clr};"></div>
-          <img class="hc-thumb" src="${photo}" onerror="if(this.src!=='${h.cphoto||''}')this.src='${h.cphoto||''}'" alt="">
+          <div class="hc-thumb" style="background-image:url('${photo||h.cphoto||''}')"></div>
           ${photos.length>1?`
             <button class="hc-nav hc-nav-prev" onclick="navProp('${h.id}',-1,event)">&#8249;</button>
             <button class="hc-nav hc-nav-next" onclick="navProp('${h.id}',1,event)">&#8250;</button>
@@ -616,9 +619,9 @@ function navProp(id,dir,e){
   const photos=propPhotos(h);
   st.pidx[id]=((st.pidx[id]||0)+dir+photos.length)%photos.length;
   const col=document.getElementById('tc-'+id); if(!col) return;
-  const img=col.querySelector('.hc-thumb');
+  const thumb=col.querySelector('.hc-thumb');
   const cnt=col.querySelector('.hc-photo-count');
-  if(img) img.src=photos[st.pidx[id]]||h.cphoto||'';
+  if(thumb) thumb.style.backgroundImage=`url('${photos[st.pidx[id]]||h.cphoto||''}')`;
   if(cnt) cnt.textContent=`${st.pidx[id]+1}/${photos.length}`;
 }
 
@@ -747,11 +750,7 @@ function renderMPhotos(basePhoto) {
     ? `<div class="mphoto-item">
         <div class="mphoto-thumb">
           <img src="${basePhoto}" onerror="this.style.opacity=0.3" alt="">
-          <span class="mphoto-badge">base</span>
-        </div>
-        <div class="mphoto-controls">
-          <button class="mphoto-btn-sm" disabled title="Base photo cannot be moved">&#8593;</button>
-          <button class="mphoto-btn-sm" disabled title="Base photo cannot be moved">&#8595;</button>
+          <span class="mphoto-badge">base &mdash; locked</span>
         </div>
       </div>`
     : '';
