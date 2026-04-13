@@ -22,12 +22,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .header-top { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px 8px; gap: 12px; }
 .logo { display: flex; align-items: stretch; }
 .logo-bar { width: 3px; background: linear-gradient(to bottom, var(--copper), var(--turquoise)); border-radius: 2px; margin-right: 12px; flex-shrink: 0; }
-.logo-text { display: flex; flex-direction: column; justify-content: center; line-height: 1; }
-.logo-great { font-size: 9px; letter-spacing: 0.35em; color: var(--brown-lt); text-transform: uppercase; margin-bottom: 1px; }
-.logo-penn { font-family: "Cormorant Garamond", serif; font-size: 30px; font-weight: 700; background: linear-gradient(135deg, #B86A2A 0%, #2A8FA5 55%, #E8C87A 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.05; }
-.logo-bot { display: flex; align-items: baseline; gap: 16px; margin-top: 1px; }
-.logo-migration { font-size: 9px; letter-spacing: 0.35em; color: var(--brown-lt); text-transform: uppercase; }
-.logo-nv { font-size: 9px; letter-spacing: 0.22em; color: var(--copper-lt); text-transform: uppercase; }
+.logo-text { display: flex; flex-direction: column; justify-content: center; line-height: 1; filter: drop-shadow(0 1px 5px rgba(74,38,8,0.22)); }
+.logo-great { font-size: 10px; font-weight: 700; letter-spacing: 0.38em; color: var(--brown-lt); text-transform: uppercase; margin-bottom: 1px; }
+/* padding-bottom lets the "g" descender breathe; background-clip fills it too */
+.logo-penn { font-family: "Cormorant Garamond", serif; font-size: 30px; font-weight: 700; background: linear-gradient(135deg, #C4511A 0%, #0095B5 52%, #E8A200 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.15; padding-bottom: 4px; }
+.logo-bot { display: flex; align-items: baseline; justify-content: space-between; margin-top: 2px; min-width: 160px; }
+.logo-migration { font-size: 10px; font-weight: 700; letter-spacing: 0.38em; color: var(--brown-lt); text-transform: uppercase; }
+.logo-nv { font-size: 10px; font-weight: 600; letter-spacing: 0.22em; color: var(--copper-lt); text-transform: uppercase; margin-left: 18px; }
 .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .disclaimer { font-size: 10px; color: #bbb; white-space: nowrap; }
 .saved-flash { font-size: 10px; color: #5a9e5a; opacity: 0; transition: opacity 0.3s; font-weight: 600; white-space: nowrap; }
@@ -453,10 +454,10 @@ async function loadSB() {
 
 async function syncData() {
   const btn = document.getElementById('sync-btn');
-  btn.disabled = true; btn.textContent = '&#8635; Syncing...';
+  btn.disabled = true; btn.innerHTML = '&#8635; Syncing...';
   await loadSB();
   rClist(); rGrid();
-  btn.disabled = false; btn.textContent = '&#8635; Sync';
+  btn.disabled = false; btn.innerHTML = '&#8635; Sync';
   flash();
 }
 
