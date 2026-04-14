@@ -20,15 +20,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 /* HEADER */
 .header {
   background: linear-gradient(100deg,
-    #120800 0%,
-    #281205 10%,
-    #4E2410 22%,
-    #7A3E1A 34%,
-    #A86030 46%,
-    #C88850 56%,
-    #DDB88A 68%,
-    #EAD5B5 80%,
-    #EFE8DB 100%
+    #EFE8DB 0%,
+    #EAD5B5 18%,
+    #D8A870 34%,
+    #A86030 50%,
+    #5C2E12 66%,
+    #2A1008 82%,
+    #120800 100%
   );
   border-bottom: 1px solid rgba(184,106,42,0.4);
   flex-shrink: 0;
@@ -44,23 +42,23 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
   box-shadow: 0 0 10px rgba(255,100,0,0.7), 0 0 22px rgba(255,100,0,0.28);
 }
 .logo-text { display: flex; flex-direction: column; justify-content: center; line-height: 1; }
-.logo-great { font-size: 10px; font-weight: 700; letter-spacing: 0.38em; color: rgba(255,255,255,0.58); text-transform: uppercase; margin-bottom: 1px; text-shadow: 0 1px 4px rgba(0,0,0,0.55); }
+.logo-great { font-size: 10px; font-weight: 700; letter-spacing: 0.38em; color: rgba(90,50,15,0.72); text-transform: uppercase; margin-bottom: 1px; }
 /* padding-bottom lets the "g" descender breathe; background-clip fills it too */
 .logo-penn { font-family: "Cormorant Garamond", serif; font-size: 32px; font-weight: 700; background: linear-gradient(135deg, #FF4400 0%, #00A8D8 48%, #FFBE00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.15; padding-bottom: 4px; filter: drop-shadow(0 0 12px rgba(255,80,0,0.45)) drop-shadow(0 2px 8px rgba(0,0,0,0.65)); }
 .logo-bot { display: flex; align-items: baseline; justify-content: space-between; margin-top: 2px; min-width: 168px; }
-.logo-migration { font-size: 10px; font-weight: 700; letter-spacing: 0.38em; color: rgba(255,255,255,0.58); text-transform: uppercase; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
-.logo-nv { font-size: 10px; font-weight: 600; letter-spacing: 0.22em; color: rgba(255,195,110,0.92); text-transform: uppercase; margin-left: 18px; text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
+.logo-migration { font-size: 10px; font-weight: 700; letter-spacing: 0.38em; color: rgba(90,50,15,0.72); text-transform: uppercase; }
+.logo-nv { font-size: 10px; font-weight: 600; letter-spacing: 0.22em; color: #A06030; text-transform: uppercase; margin-left: 18px; }
 .header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.disclaimer { font-size: 10px; color: rgba(100,60,20,0.55); white-space: nowrap; }
-.saved-flash { font-size: 10px; color: #5a9e5a; opacity: 0; transition: opacity 0.3s; font-weight: 600; white-space: nowrap; }
+.disclaimer { font-size: 10px; color: rgba(210,170,100,0.7); white-space: nowrap; }
+.saved-flash { font-size: 10px; color: #80E080; opacity: 0; transition: opacity 0.3s; font-weight: 600; white-space: nowrap; }
 .saved-flash.show { opacity: 1; }
 .hdr-btn { font-size: 11px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-md); background: none; cursor: pointer; font-weight: 600; transition: all 0.15s; white-space: nowrap; }
-.export-btn { color: #7A3210; }
-.export-btn:hover { background: rgba(122,50,16,0.08); border-color: #7A3210; }
-.sync-btn { color: #0E6E88; border-color: rgba(14,110,136,0.4); }
-.sync-btn:hover { background: rgba(14,110,136,0.08); border-color: #0E6E88; }
+.export-btn { color: #F0C090; }
+.export-btn:hover { background: rgba(240,192,144,0.12); border-color: #F0C090; }
+.sync-btn { color: #80D0F0; border-color: rgba(128,208,240,0.45); }
+.sync-btn:hover { background: rgba(128,208,240,0.12); border-color: #80D0F0; }
 .sync-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.tab-bar { display: flex; padding: 0 20px; border-top: 1px solid rgba(184,106,42,0.2); background: linear-gradient(100deg, rgba(40,18,5,0.10) 0%, rgba(239,232,219,0) 55%); }
+.tab-bar { display: flex; padding: 0 20px; border-top: 1px solid rgba(184,106,42,0.2); background: linear-gradient(100deg, rgba(239,232,219,0) 45%, rgba(40,18,5,0.12) 100%); }
 .tab-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 7px 16px; font-size: 13px; font-weight: 500; color: var(--brown-lt); cursor: pointer; transition: all 0.15s; }
 .tab-btn.active { color: #C4511A; border-bottom-color: #C4511A; font-weight: 600; }
 
