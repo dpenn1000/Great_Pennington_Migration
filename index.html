@@ -5,7 +5,6 @@
     || (window.innerWidth < 768 && ('ontouchstart' in window));
   if (mobile) window.location.replace('mobile.html');
 })();
-</script>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -51,7 +50,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .logo-text { display: flex; flex-direction: column; justify-content: center; line-height: 1; }
 .logo-great { font-size: 10px; font-weight: 700; letter-spacing: 0.38em; color: rgba(90,50,15,0.72); text-transform: uppercase; margin-bottom: 1px; }
 /* padding-bottom lets the "g" descender breathe; background-clip fills it too */
-.logo-penn { font-family: "Cormorant Garamond", serif; font-size: 32px; font-weight: 700; background: linear-gradient(135deg, #FF4400 0%, #00A8D8 48%, #FFBE00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.15; padding-bottom: 4px; filter: drop-shadow(0 0 12px rgba(255,80,0,0.45)) drop-shadow(0 2px 8px rgba(0,0,0,0.65)); }
+.logo-penn { font-family: "Cormorant Garamond", serif; font-size: 32px; font-weight: 700; background: linear-gradient(135deg, #FF4400 0%, #00A8D8 48%, #FFBE00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.15; padding-bottom: 4px; filter: drop-shadow(0 1px 5px rgba(0,0,0,0.55)); }
 .logo-bot { display: flex; align-items: baseline; justify-content: space-between; margin-top: 2px; min-width: 168px; }
 .logo-migration { font-size: 10px; font-weight: 700; letter-spacing: 0.38em; color: rgba(90,50,15,0.72); text-transform: uppercase; }
 .logo-nv { font-size: 10px; font-weight: 600; letter-spacing: 0.22em; color: #A06030; text-transform: uppercase; margin-left: 18px; }
@@ -59,11 +58,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .disclaimer { font-size: 10px; color: rgba(210,170,100,0.7); white-space: nowrap; }
 .saved-flash { font-size: 10px; color: #80E080; opacity: 0; transition: opacity 0.3s; font-weight: 600; white-space: nowrap; }
 .saved-flash.show { opacity: 1; }
-.hdr-btn { font-size: 11px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-md); background: none; cursor: pointer; font-weight: 600; transition: all 0.15s; white-space: nowrap; }
+.hdr-btn { font-size: 11px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-md); background: transparent; cursor: pointer; font-weight: 600; transition: all 0.15s; white-space: nowrap; }
 .export-btn { color: #F0C090; }
-.export-btn:hover { background: rgba(240,192,144,0.12); border-color: #F0C090; }
+.export-btn:hover { background: rgba(240,192,144,0.18); border-color: #F0C090; }
 .sync-btn { color: #80D0F0; border-color: rgba(128,208,240,0.45); }
-.sync-btn:hover { background: rgba(128,208,240,0.12); border-color: #80D0F0; }
+.sync-btn:hover { background: rgba(128,208,240,0.18); border-color: #80D0F0; }
 .sync-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .tab-bar { display: flex; padding: 0 20px; border-top: 1px solid rgba(184,106,42,0.2); background: linear-gradient(100deg, rgba(239,232,219,0) 45%, rgba(40,18,5,0.12) 100%); }
 .tab-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 7px 16px; font-size: 13px; font-weight: 500; color: var(--brown-lt); cursor: pointer; transition: all 0.15s; }
@@ -243,6 +242,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 .em-save:hover { background: var(--copper-dk); }
 .em-save:disabled { background: var(--sand-dk); cursor: not-allowed; }
 .em-cancel { padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border-md); background: none; color: var(--brown-lt); font-size: 13px; cursor: pointer; }
+.em-delete { padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(192,57,43,0.35); background: none; color: #c0392b; font-size: 13px; cursor: pointer; transition: all 0.15s; margin-right: auto; }
+.em-delete:hover { background: rgba(192,57,43,0.07); border-color: #c0392b; }
+.add-prop-btn { font-size: 11px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-md); background: none; cursor: pointer; color: var(--copper); font-weight: 600; margin-left: 8px; transition: all 0.15s; }
+.add-prop-btn:hover { background: var(--sand); border-color: var(--copper); }
 .ef { display: flex; flex-direction: column; gap: 4px; }
 .ef label { font-size: 10px; font-weight: 600; color: var(--brown-lt); text-transform: uppercase; letter-spacing: 0.06em; }
 .ef input, .ef textarea { border: 1px solid var(--border-md); border-radius: 6px; padding: 7px 10px; font-size: 12px; color: var(--brown); background: var(--sand-lt); font-family: inherit; outline: none; transition: border-color 0.15s; width: 100%; }
@@ -359,8 +362,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
 
 <div id="pg1" class="page">
   <div class="comp-side">
-    <div class="comp-top">
+    <div class="comp-top" style="display:flex;align-items:center;">
       <span class="comp-top-label" id="rated-count">Loading...</span>
+      <button class="add-prop-btn" onclick="openAddProp()">+ Add</button>
     </div>
     <div class="comp-list" id="cgrid"></div>
   </div>
@@ -380,6 +384,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; b
     </div>
     <div class="em-body" id="em-body"></div>
     <div class="em-foot">
+      <button class="em-delete" id="em-delete" onclick="deleteItem()" style="display:none">Delete</button>
       <button class="em-cancel" onclick="closeEdit()">Cancel</button>
       <button class="em-save" id="em-save" onclick="saveEdit()">Save changes</button>
     </div>
@@ -503,6 +508,7 @@ function merged(h, c) {
   return {
     ...h,
     cid:c.id, cn:c.name, clr:c.color, dk:c.colorDark, d:c.day, cphoto:c.photo,
+    address:  sb.address  || h.address,
     price:    sb.price    || h.price,
     beds:     sb.beds     ?? h.beds,
     baths:    sb.baths    ?? h.baths,
@@ -514,8 +520,32 @@ function merged(h, c) {
     notes:    sb.notes    || '',
   };
 }
-function flat() { return C.flatMap(c => c.properties.map(h => merged(h, c))); }
+function flat() {
+  // JSON properties, filtered if deleted via Supabase flag
+  const jsonProps = C.flatMap(c =>
+    c.properties
+      .filter(h => !SBP[h.id]?.deleted)
+      .map(h => merged(h, c))
+  );
+  // User-added properties stored entirely in Supabase
+  const addedProps = Object.values(SBP)
+    .filter(r => r.user_added && !r.deleted)
+    .map(r => {
+      const comm = C.find(x => x.id === r.community_id) || C[0];
+      return {
+        id: r.id, address: r.address||'', lat: r.lat||0, lng: r.lng||0,
+        cid: comm.id, cn: comm.name, clr: comm.color, dk: comm.colorDark,
+        d: comm.day, cphoto: comm.photo, photo: '',
+        price: r.price||'', beds: r.beds||0, baths: r.baths||0,
+        sqft: r.sqft||0, dom: r.dom||0, features: r.features||[],
+        zillow: r.zillow||'', rating: r.rating||0, notes: r.notes||'',
+        photos: r.photos||[], isUserAdded: true,
+      };
+    });
+  return [...jsonProps, ...addedProps];
+}
 function propPhotos(h) {
+  if (h.isUserAdded) return (h.photos||[]).filter(Boolean);
   const sb = SBP[h.id];
   if (sb?.photos?.length) return sb.photos; // Supabase photos = full list (includes base)
   return [h.photo].filter(Boolean);          // fallback: JSON base only
@@ -728,9 +758,13 @@ function openPropEdit(id,e){
   e.stopPropagation();
   editMode='property'; editId=id;
   const h=flat().find(x=>x.id===id);
+  const isAdded=!!(SBP[id]?.user_added);
   mPhotos=[...propPhotos(h)];  // ALL photos, fully editable
-  document.getElementById('em-title').textContent=h.address;
+  document.getElementById('em-title').textContent=h.address||'Edit property';
+  document.getElementById('em-delete').style.display='block';
   document.getElementById('em-body').innerHTML=`
+    <div class="ef"><label>Address</label><input id="ef-addr" value="${h.address}"></div>
+    <div class="ef"><label>Community</label><select id="ef-comm">${C.map(x=>`<option value="${x.id}"${x.id===h.cid?' selected':''}>${x.name}</option>`).join('')}</select></div>
     <div class="ef"><label>Price</label><input id="ef-price" value="${h.price}"></div>
     <div class="ef-row">
       <div class="ef"><label>Beds</label><input id="ef-beds" type="number" value="${h.beds}"></div>
@@ -758,6 +792,7 @@ function openPropEdit(id,e){
 function openCommEdit(id,e){
   e.stopPropagation();
   editMode='community'; editId=id;
+  document.getElementById('em-delete').style.display='none';
   const c=C.find(x=>x.id===id), sb=SBC[id]||{};
   mPhotos=[...commPhotos(c)];  // ALL photos, fully editable
   document.getElementById('em-title').textContent=sb.name||c.name;
@@ -847,9 +882,12 @@ async function saveEdit(){
   const btn=document.getElementById('em-save');
   btn.disabled=true; btn.textContent='Saving...';
   try{
-    if(editMode==='property'){
+    if(editMode==='add'||editMode==='property'){
+      const commId=document.getElementById('ef-comm')?.value||null;
       const fields={
         id:editId,
+        address:document.getElementById('ef-addr')?.value.trim()||undefined,
+        community_id:commId,
         price:document.getElementById('ef-price').value.trim(),
         beds:parseFloat(document.getElementById('ef-beds').value)||null,
         baths:parseFloat(document.getElementById('ef-baths').value)||null,
@@ -859,7 +897,10 @@ async function saveEdit(){
         zillow:document.getElementById('ef-zillow').value.trim(),
         notes:document.getElementById('ef-notes').value,
         photos:mPhotos,
+        ...(editMode==='add'?{user_added:true,lat:parseFloat(document.getElementById('ef-lat')?.value)||0,lng:parseFloat(document.getElementById('ef-lng')?.value)||0}:{}),
       };
+      // strip undefined keys
+      Object.keys(fields).forEach(k=>fields[k]===undefined&&delete fields[k]);
       SBP[editId]={...(SBP[editId]||{}),...fields};
       await db.from('property_data').upsert(fields,{onConflict:'id'});
     } else {
@@ -874,6 +915,15 @@ async function saveEdit(){
       SBC[editId]={...(SBC[editId]||{}),...fields};
       await db.from('community_data').upsert(fields,{onConflict:'id'});
     }
+    // If adding a new property, drop a pin on both maps
+    if(editMode==='add'){
+      const prop=SBP[editId];
+      const comm=C.find(c=>c.id===prop.community_id)||C[0];
+      const lat=prop.lat||comm.center[0], lng=prop.lng||comm.center[1];
+      const h={...prop,cid:comm.id,cn:comm.name,clr:comm.color,dk:comm.colorDark,d:comm.day,cphoto:comm.photo,photo:'',features:prop.features||[],zillow:prop.zillow||'',rating:prop.rating||0,notes:prop.notes||''};
+      mk1[editId]=L.marker([lat,lng],{icon:mIcon(comm.color)}).addTo(m1).bindPopup(()=>makePopup(h,comm),{maxWidth:300,minWidth:276});
+      mk2[editId]=L.marker([lat,lng],{icon:mIcon(comm.color)}).addTo(m2).bindPopup(`<div style="font-family:sans-serif;padding:2px;"><b style="color:#4A2608;font-size:12px;">${prop.address||''}</b><br><span style="color:#7A4A20;font-size:11px;">${comm.name} &middot; ${prop.price||''}</span></div>`,{maxWidth:190});
+    }
     closeEdit(); rClist(); rGrid(); flash();
   } catch(err){
     alert('Save failed: '+err.message);
@@ -881,8 +931,99 @@ async function saveEdit(){
     btn.disabled=false; btn.textContent='Save changes';
   }
 }
+async function geocodeAddress(){
+  const addr = (document.getElementById('ef-addr')?.value||'').trim();
+  if(!addr){ alert('Enter an address first.'); return; }
+  const btn=document.getElementById('geocode-btn');
+  const st=document.getElementById('geocode-status');
+  btn.textContent='Locating...'; btn.disabled=true; st.textContent='';
+  try{
+    const q=encodeURIComponent(addr+', Nevada, USA');
+    const res=await fetch('https://nominatim.openstreetmap.org/search?q='+q+'&format=json&limit=1&countrycodes=us',
+      {headers:{'Accept-Language':'en','User-Agent':'PenningtonMigrationApp/1.0'}});
+    const data=await res.json();
+    if(!data.length){
+      st.textContent='Not found — try shorter address or enter manually.';
+      st.style.color='#c0392b';
+    } else {
+      document.getElementById('ef-lat').value=parseFloat(data[0].lat).toFixed(6);
+      document.getElementById('ef-lng').value=parseFloat(data[0].lon).toFixed(6);
+      const short=data[0].display_name.split(',').slice(0,2).join(',');
+      st.textContent='✓ '+short; st.style.color='#2a7a2a';
+    }
+  }catch(err){
+    st.textContent='Error — enter coordinates manually.'; st.style.color='#c0392b';
+  }finally{
+    btn.innerHTML='&#128205; Locate address'; btn.disabled=false;
+  }
+}
+
+function openAddProp(){
+  editMode='add'; editId='u_'+Date.now();
+  mPhotos=[];
+  document.getElementById('em-title').textContent='Add property';
+  document.getElementById('em-delete').style.display='none';
+  document.getElementById('em-body').innerHTML=`
+    <div class="ef"><label>Address</label><input id="ef-addr" placeholder="123 Main St, Las Vegas NV"></div>
+    <div class="ef"><label>Community</label><select id="ef-comm" style="border:1px solid var(--border-md);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--brown);background:var(--sand-lt);font-family:inherit;outline:none;width:100%;">${C.map(x=>`<option value="${x.id}">${x.name} (${x.day==='W'?'Wed 4/15':'Thu 4/16'})</option>`).join('')}</select></div>
+    <div class="ef"><label>Price</label><input id="ef-price" placeholder="$600,000"></div>
+    <div class="ef-row">
+      <div class="ef"><label>Beds</label><input id="ef-beds" type="number" placeholder="4"></div>
+      <div class="ef"><label>Baths</label><input id="ef-baths" type="number" step="0.5" placeholder="3"></div>
+      <div class="ef"><label>Sqft</label><input id="ef-sqft" type="number" placeholder="2500"></div>
+      <div class="ef"><label>Days listed</label><input id="ef-dom" type="number" placeholder="14"></div>
+    </div>
+    <div class="ef"><label>Features (comma-separated)</label><input id="ef-feats" placeholder="3-car garage, Pool, Solar"></div>
+    <div class="ef"><label>Zillow URL</label><input id="ef-zillow" placeholder="https://zillow.com/..."></div>
+    <div class="ef"><label>Latitude &amp; Longitude <span style="font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;">right-click in Google Maps → "What's here?"</span></label>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+        <button type="button" onclick="geocodeAddress()" id="geocode-btn" style="font-size:11px;padding:6px 12px;border-radius:6px;border:1px solid rgba(42,143,165,0.4);background:transparent;cursor:pointer;font-weight:600;color:var(--turquoise);white-space:nowrap;font-family:inherit;flex-shrink:0;">&#128205; Locate address</button>
+        <span id="geocode-status" style="font-size:10px;color:var(--brown-lt);font-style:italic;"></span>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input id="ef-lat" placeholder="Latitude (auto-filled)" style="flex:1;">
+        <input id="ef-lng" placeholder="Longitude (auto-filled)" style="flex:1;">
+      </div>
+    </div>
+    <div class="ef"><label>Notes</label><textarea id="ef-notes" placeholder="Tour notes..."></textarea></div>
+    <div class="ef"><label>Photos</label>
+      <div class="mphoto-list" id="mphoto-list">${renderMPhotos()}</div>
+      <div class="mphoto-add">
+        <input type="text" id="mphoto-url" placeholder="Paste photo URL...">
+        <button class="mphoto-add-btn" onclick="addMPhotoUrl()">Add URL</button>
+        <label class="mphoto-upload-btn">Upload <input type="file" accept="image/*" multiple onchange="addMPhotoUpload(this.files)"></label>
+      </div>
+    </div>`;
+  document.getElementById('em-save').textContent='Add property';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+async function deleteItem(){
+  if(!confirm('Delete this property? This cannot be undone.')) return;
+  const btn=document.getElementById('em-delete');
+  btn.textContent='Deleting...'; btn.disabled=true;
+  try{
+    if(SBP[editId]?.user_added){
+      await db.from('property_data').delete().eq('id',editId);
+      delete SBP[editId];
+    } else {
+      SBP[editId]={...(SBP[editId]||{id:editId}),deleted:true};
+      await db.from('property_data').upsert({id:editId,deleted:true},{onConflict:'id'});
+    }
+    // Remove pins from both maps
+    if(mk1[editId]){mk1[editId].remove();delete mk1[editId];}
+    if(mk2[editId]){mk2[editId].remove();delete mk2[editId];}
+    closeEdit(); rGrid(); flash();
+  }catch(err){
+    alert('Delete failed: '+err.message);
+    btn.textContent='Delete'; btn.disabled=false;
+  }
+}
+
 function closeEdit(){
   document.getElementById('edit-modal').classList.remove('open');
+  document.getElementById('em-save').textContent='Save changes';
+  document.getElementById('em-delete').style.display='none';
   editMode=null; editId=null; mPhotos=[];
 }
 function closeEditIfBack(e){ if(e.target===document.getElementById('edit-modal')) closeEdit(); }
