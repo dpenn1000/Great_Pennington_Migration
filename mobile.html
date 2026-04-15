@@ -305,20 +305,30 @@ body {
   position: fixed; bottom: 0; left: 0; right: 0;
   background: #fff; border-radius: 20px 20px 0 0;
   box-shadow: 0 -6px 30px rgba(74,38,8,0.22);
-  z-index: 700; max-height: 72vh; overflow-y: auto;
+  z-index: 700; max-height: 72vh;
+  display: flex; flex-direction: column; overflow: hidden;
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
-  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px);
-  -webkit-overflow-scrolling: touch;
 }
 .map-sheet.open { transform: translateY(0); }
-.ms-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--sand-dk); margin: 10px auto 0; display: block; }
+.ms-header {
+  flex-shrink: 0; position: relative;
+  padding: 10px 50px 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: #fff; cursor: grab;
+}
+.ms-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--sand-dk); margin: 0 auto 8px; display: block; }
+.ms-addr-preview { font-size: 13px; font-weight: 600; color: var(--brown); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ms-close-btn {
-  position: absolute; top: 10px; right: 14px;
+  position: absolute; top: 50%; right: 12px; transform: translateY(-50%);
   width: 30px; height: 30px; border-radius: 50%;
   background: var(--sand-dk); border: none; cursor: pointer;
   font-size: 16px; color: var(--brown-lt);
   display: flex; align-items: center; justify-content: center;
+}
+.ms-scroll {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px);
 }
 .ms-content { padding: 12px 16px 4px; }
 .ms-hero {
@@ -581,8 +591,8 @@ body {
 
 <!-- EDIT SHEET -->
 <div class="edit-sheet" id="edit-sheet">
-  <div class="es-head">
-    <div class="es-handle" id="es-handle"></div>
+  <div class="es-head" id="es-head">
+    <div class="es-handle"></div>
     <div class="es-title-row">
       <div class="es-title" id="es-title">Edit</div>
       <button class="es-close" onclick="closeEdit()">&#215;</button>
@@ -597,23 +607,28 @@ body {
 
 <!-- MAP BOTTOM SHEET -->
 <div class="map-sheet" id="map-sheet">
-  <div class="ms-handle" id="ms-handle"></div>
-  <button class="ms-close-btn" onclick="closeMapSheet()">&#215;</button>
-  <div class="ms-content">
-    <div class="ms-hero" id="ms-hero">
-      <div class="ms-hero-overlay"></div>
-      <div class="ms-price" id="ms-price"></div>
-      <div class="ms-dom-lbl" id="ms-dom"></div>
+  <div class="ms-header" id="ms-header">
+    <div class="ms-handle"></div>
+    <div class="ms-addr-preview" id="ms-addr-preview"></div>
+    <button class="ms-close-btn" onclick="closeMapSheet()">&#215;</button>
+  </div>
+  <div class="ms-scroll">
+    <div class="ms-content">
+      <div class="ms-hero" id="ms-hero">
+        <div class="ms-hero-overlay"></div>
+        <div class="ms-price" id="ms-price"></div>
+        <div class="ms-dom-lbl" id="ms-dom"></div>
+      </div>
+      <div class="ms-addr" id="ms-addr"></div>
+      <div class="ms-badges" id="ms-badges"></div>
+      <div class="ms-stats">
+        <div class="ms-stat"><div class="ms-stat-val" id="ms-beds"></div><div class="ms-stat-lbl">Beds</div></div>
+        <div class="ms-stat"><div class="ms-stat-val" id="ms-baths"></div><div class="ms-stat-lbl">Baths</div></div>
+        <div class="ms-stat"><div class="ms-stat-val" id="ms-sqft"></div><div class="ms-stat-lbl">Sqft</div></div>
+      </div>
+      <div class="ms-stars" id="ms-stars"></div>
+      <a class="ms-zillow" id="ms-zillow" href="#" target="_blank">View on Zillow &#8594;</a>
     </div>
-    <div class="ms-addr" id="ms-addr"></div>
-    <div class="ms-badges" id="ms-badges"></div>
-    <div class="ms-stats">
-      <div class="ms-stat"><div class="ms-stat-val" id="ms-beds"></div><div class="ms-stat-lbl">Beds</div></div>
-      <div class="ms-stat"><div class="ms-stat-val" id="ms-baths"></div><div class="ms-stat-lbl">Baths</div></div>
-      <div class="ms-stat"><div class="ms-stat-val" id="ms-sqft"></div><div class="ms-stat-lbl">Sqft</div></div>
-    </div>
-    <div class="ms-stars" id="ms-stars"></div>
-    <a class="ms-zillow" id="ms-zillow" href="#" target="_blank">View on Zillow &#8594;</a>
   </div>
 </div>
 
@@ -774,7 +789,12 @@ function setupOfflineHandlers() {
 }
 
 function updateConnStatus() {
-  if (!navigator.onLine) { setConnStatus('red', 'Offline'); showOfflineBanner(true); return; }
+  if (!navigator.onLine) {
+    setConnStatus('red', 'Offline');
+    // Don't auto-show banner -- navigator.onLine is unreliable on many networks.
+    // Banner only appears when a write is actually queued (see queueWrite calls).
+    return;
+  }
   showOfflineBanner(false);
   if (hasQueuedChanges()) { setConnStatus('yellow', 'Unsynced'); }
   else { setConnStatus('green', 'Synced'); }
@@ -1017,8 +1037,9 @@ async function setRating(id, n) {
     showFlash('Rating saved');
   } else {
     queueWrite(id, 'rating', n);
+    showOfflineBanner(true);
     updateConnStatus();
-    showFlash('Queued offline');
+    showFlash('Saved offline — will sync when connected');
   }
 }
 
@@ -1031,6 +1052,7 @@ function setNotes(id, v) {
       showFlash('Saved');
     } else {
       queueWrite(id, 'notes', v);
+      showOfflineBanner(true);
       updateConnStatus();
     }
   }, 800);
@@ -1082,8 +1104,6 @@ function initMap() {
       .on('click', () => openMapSheet(h.id));
   });
   renderMapFilter();
-  // Setup map sheet drag-to-close
-  setupSheetDrag(document.getElementById('ms-handle'), closeMapSheet);
 }
 
 function mkIcon(clr) {
@@ -1120,10 +1140,10 @@ function openMapSheet(id) {
   msOpenId = id;
   const photos = propPhotos(h);
   const photo = photos[0] || (comm?.photo || '');
-  const sheet = document.getElementById('map-sheet');
   document.getElementById('ms-hero').style.backgroundImage = `url('${photo}')`;
   document.getElementById('ms-price').textContent = h.price;
   document.getElementById('ms-dom').textContent = h.dom + 'd listed';
+  document.getElementById('ms-addr-preview').textContent = h.address;
   document.getElementById('ms-addr').textContent = h.address;
   const dayLabel = h.d === 'W' ? 'Wed 4/15' : 'Thu 4/16';
   document.getElementById('ms-badges').innerHTML =
@@ -1137,8 +1157,7 @@ function openMapSheet(id) {
     `<span class="ms-star${r>=n?' lit':''}" id="msr${id}-${n}" onclick="setRating('${id}',${n})">&#9733;</span>`
   ).join('');
   document.getElementById('ms-zillow').href = h.zillow;
-  sheet.classList.add('open');
-  // Fly map to property
+  document.getElementById('map-sheet').classList.add('open');
   theMap.flyTo([h.lat, h.lng], 15, { duration: 0.6 });
 }
 
@@ -1402,10 +1421,12 @@ if ('serviceWorker' in navigator) {
 }
 
 /* ============================================================
-   SETUP EDIT SHEET DRAG
+   SETUP EDIT SHEET DRAG + MAP SHEET DRAG
    ============================================================ */
 window.addEventListener('load', () => {
-  setupSheetDrag(document.getElementById('es-handle'), closeEdit);
+  // Swipe the whole header bar — much bigger target than the 4px nub
+  setupSheetDrag(document.getElementById('es-head'), closeEdit);
+  setupSheetDrag(document.getElementById('ms-header'), closeMapSheet);
 });
 
 /* ============================================================
