@@ -480,14 +480,13 @@ body {
 
 /* ---- OFFLINE / FLASH ---- */
 .offline-banner {
-  position: fixed; left: 0; right: 0;
-  top: calc(52px + env(safe-area-inset-top, 0px));
+  flex-shrink: 0; overflow: hidden; height: 0;
   background: #FF9500; color: #fff;
   font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
-  padding: 8px 16px; text-align: center; z-index: 800;
-  transform: translateY(-100%); transition: transform 0.3s;
+  display: flex; align-items: center; justify-content: center;
+  transition: height 0.25s ease;
 }
-.offline-banner.show { transform: translateY(0); }
+.offline-banner.show { height: 36px; }
 .flash-toast {
   position: fixed; z-index: 1500; pointer-events: none;
   bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 14px);
@@ -538,6 +537,9 @@ body {
     </button>
   </div>
 </header>
+
+<!-- OFFLINE BANNER — in flow, cannot cover header -->
+<div class="offline-banner" id="offline-banner">No internet &mdash; changes saved locally</div>
 
 <!-- MAIN -->
 <main class="content">
@@ -632,8 +634,7 @@ body {
   </div>
 </div>
 
-<!-- OFFLINE BANNER + FLASH -->
-<div class="offline-banner" id="offline-banner">No internet connection &mdash; changes queued locally</div>
+<!-- FLASH TOAST -->
 <div class="flash-toast" id="flash-toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -1030,16 +1031,16 @@ function onNotesInput(id, el) {
    ============================================================ */
 async function setRating(id, n) {
   SBP[id] = { ...(SBP[id] || { id }), rating: n };
-  // Update stars in all rendered copies
-  document.querySelectorAll(`#psr-${id} .prop-star, #msr-${id} .ms-star`).forEach((s, i) => s.classList.toggle('lit', i < n));
-  if (navigator.onLine) {
-    await db.from('property_data').upsert({ id, rating: n }, { onConflict: 'id' });
+  document.querySelectorAll(`#psr-${id} .prop-star, #msr${id}-1, #msr${id}-2, #msr${id}-3, #msr${id}-4, #msr${id}-5`).forEach((s, i) => s.classList.toggle('lit', i < n));
+  try {
+    const { error } = await db.from('property_data').upsert({ id, rating: n }, { onConflict: 'id' });
+    if (error) throw error;
     showFlash('Rating saved');
-  } else {
+  } catch(e) {
     queueWrite(id, 'rating', n);
     showOfflineBanner(true);
     updateConnStatus();
-    showFlash('Saved offline — will sync when connected');
+    showFlash('Saved locally');
   }
 }
 
@@ -1047,10 +1048,11 @@ function setNotes(id, v) {
   SBP[id] = { ...(SBP[id] || { id }), notes: v };
   clearTimeout(nTimers[id]);
   nTimers[id] = setTimeout(async () => {
-    if (navigator.onLine) {
-      await db.from('property_data').upsert({ id, notes: v }, { onConflict: 'id' });
+    try {
+      const { error } = await db.from('property_data').upsert({ id, notes: v }, { onConflict: 'id' });
+      if (error) throw error;
       showFlash('Saved');
-    } else {
+    } catch(e) {
       queueWrite(id, 'notes', v);
       showOfflineBanner(true);
       updateConnStatus();
@@ -1074,13 +1076,15 @@ async function uploadPropPhoto(id, file) {
       const photos = [...existing, dataUrl];
       SBP[id] = { ...(SBP[id] || { id }), photos };
       st.pidx[id] = photos.length - 1;
-      if (navigator.onLine) {
-        await db.from('property_data').upsert({ id, photos }, { onConflict: 'id' });
+      try {
+        const { error } = await db.from('property_data').upsert({ id, photos }, { onConflict: 'id' });
+        if (error) throw error;
         showFlash('Photo saved');
-      } else {
+      } catch(e) {
         queueWrite(id, 'photo', dataUrl);
+        showOfflineBanner(true);
         updateConnStatus();
-        showFlash('Photo queued offline');
+        showFlash('Photo saved locally');
       }
       renderProps();
     };
@@ -1303,12 +1307,8 @@ async function saveEdit() {
         photos: mPhotos,
       };
       SBP[editId] = { ...(SBP[editId] || {}), ...fields };
-      if (navigator.onLine) {
-        await db.from('property_data').upsert(fields, { onConflict: 'id' });
-      } else {
-        Object.entries(fields).forEach(([k,v]) => { if (k !== 'id') queueWrite(editId, k, v); });
-        updateConnStatus();
-      }
+      const { error: pe } = await db.from('property_data').upsert(fields, { onConflict: 'id' });
+      if (pe) throw pe;
     } else {
       const fields = {
         id: editId,
@@ -1319,9 +1319,8 @@ async function saveEdit() {
         photos: mPhotos,
       };
       SBC[editId] = { ...(SBC[editId] || {}), ...fields };
-      if (navigator.onLine) {
-        await db.from('community_data').upsert(fields, { onConflict: 'id' });
-      }
+      const { error: ce } = await db.from('community_data').upsert(fields, { onConflict: 'id' });
+      if (ce) throw ce;
     }
     closeEdit(); renderAll(); showFlash('Saved');
   } catch(err) { alert('Save failed: ' + err.message); }
