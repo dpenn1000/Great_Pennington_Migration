@@ -1,14 +1,18 @@
 <!DOCTYPE html>
-<script>
-(function() {
-  var mobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    || (window.innerWidth < 768 && ('ontouchstart' in window));
-  if (mobile) window.location.replace('mobile.html');
-})();
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  (function(){
+    var mobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    var narrow = window.innerWidth < 768;
+    if (mobile || narrow) {
+      var dest = location.href.replace(/\/index\.html$/, '').replace(/\/$/, '') + '/mobile.html';
+      location.replace(dest);
+    }
+  })();
+</script>
 <title>The Great Pennington Migration — April 2026</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link href="https://cdn.jsdelivr.net/npm/@fontsource/cormorant-garamond@5/700.css" rel="stylesheet">
