@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pennington">
+<meta name="theme-color" content="#B86A2A">
+<title>Pennington Migration</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link href="https://cdn.jsdelivr.net/npm/@fontsource/cormorant-garamond@5/700.css" rel="stylesheet">
+<style>
+:root {
+  --sand: #EFE8DB; --sand-lt: #F7F2EA; --sand-mid: #E6DBCB; --sand-dk: #D8CAAF;
+  --copper: #B86A2A; --copper-dk: #8A4E1C; --copper-lt: #D4915A;
+  --turquoise: #2A8FA5; --gold: #E8A020;
+  --brown: #4A2608; --brown-lt: #7A4A20;
+  --border: rgba(184,106,42,0.18); --border-md: rgba(184,106,42,0.32); --border-str: rgba(184,106,42,0.55);
+  --nav-h: 56px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--sand); color: var(--brown);
+  height: 100vh; height: 100dvh;
+  display: flex; flex-direction: column; overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* ---- LOADING ---- */
+.loading-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--sand); display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  z-index: 9999; gap: 14px; transition: opacity 0.3s;
+}
+.loading-overlay.hidden { opacity: 0; pointer-events: none; }
+.loading-spinner {
+  width: 28px; height: 28px; border: 3px solid var(--border-md);
+  border-top-color: var(--copper); border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.loading-text { font-size: 12px; color: var(--brown-lt); letter-spacing: 0.05em; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- HEADER ---- */
+.app-header {
+  flex-shrink: 0;
+  height: calc(52px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  background: linear-gradient(100deg, #EFE8DB 0%, #D8A060 30%, #7A3010 65%, #120800 100%);
+  border-bottom: 1px solid rgba(184,106,42,0.4);
+  display: flex; align-items: center;
+  padding-left: 16px; padding-right: 12px;
+  gap: 10px; position: relative; z-index: 100;
+}
+.logo-mark { display: flex; align-items: center; gap: 9px; flex: 1; }
+.logo-bar-m {
+  width: 3px; height: 30px;
+  background: linear-gradient(to bottom, #FF4400, #00A8D8);
+  border-radius: 3px; flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(255,100,0,0.6);
+}
+.logo-text-m { display: flex; flex-direction: column; justify-content: center; }
+.logo-p {
+  font-family: "Cormorant Garamond", serif; font-size: 24px; font-weight: 700;
+  background: linear-gradient(135deg, #C4511A 0%, #0095B5 52%, #E8A200 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  line-height: 1.15; padding-bottom: 2px;
+  filter: drop-shadow(0 0 6px rgba(255,80,0,0.4));
+}
+.logo-sub {
+  font-size: 7.5px; font-weight: 700; letter-spacing: 0.3em;
+  color: rgba(215,175,120,0.75); text-transform: uppercase; margin-top: -1px;
+}
+.header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.conn-indicator {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 9px; border-radius: 14px;
+  background: rgba(0,0,0,0.15); cursor: pointer;
+  min-height: 32px; min-width: 44px; justify-content: center;
+}
+.conn-dot { width: 8px; height: 8px; border-radius: 50%; background: #4CD964; flex-shrink: 0; transition: background 0.3s; }
+.conn-dot.yellow { background: #FFCC00; }
+.conn-dot.red { background: #FF3B30; }
+.conn-label { font-size: 9px; font-weight: 600; color: rgba(240,210,160,0.8); white-space: nowrap; }
+.hdr-icon-btn {
+  width: 40px; height: 40px; min-width: 40px; min-height: 40px;
+  background: none; border: none; cursor: pointer;
+  color: rgba(240,200,140,0.85);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px;
+}
+.hdr-icon-btn:active { background: rgba(255,255,255,0.1); }
+
+/* ---- MAIN CONTENT ---- */
+.content { flex: 1; position: relative; overflow: hidden; }
+
+/* ---- PAGES ---- */
+.page {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column; background: var(--sand);
+  opacity: 0; pointer-events: none; transition: opacity 0.18s;
+}
+.page.active { opacity: 1; pointer-events: auto; }
+
+/* ---- FILTER CHIPS BAR ---- */
+.chips-bar {
+  flex-shrink: 0; display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px; overflow-x: auto;
+  border-bottom: 1px solid var(--border); background: var(--sand-dk);
+  scrollbar-width: none;
+}
+.chips-bar::-webkit-scrollbar { display: none; }
+.chip {
+  flex-shrink: 0; font-size: 12px; font-weight: 600;
+  padding: 0 14px; height: 34px;
+  border-radius: 17px; border: 1.5px solid var(--border-md);
+  background: rgba(255,255,255,0.75); color: var(--brown-lt);
+  cursor: pointer; white-space: nowrap;
+  display: flex; align-items: center;
+  transition: all 0.15s;
+}
+.chip.on { background: var(--copper); color: #fff; border-color: var(--copper); }
+.chip:active { transform: scale(0.95); }
+.chip-sep { width: 1px; height: 22px; background: var(--border-str); flex-shrink: 0; margin: 0 2px; }
+
+/* ---- SCROLL LIST ---- */
+.scroll-list {
+  flex: 1; overflow-y: auto; display: block;
+  padding: 10px 12px 20px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin; scrollbar-color: var(--border-str) transparent;
+}
+
+/* ---- COMMUNITY CARD ---- */
+.comm-card {
+  border-radius: 13px; border: 1.5px solid var(--border); background: #fff;
+  margin-bottom: 12px; overflow: hidden; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(74,38,8,0.07);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.comm-card:active { transform: scale(0.99); box-shadow: 0 1px 4px rgba(74,38,8,0.1); }
+.comm-hero {
+  height: 170px; position: relative; overflow: hidden;
+  background: var(--sand-dk); touch-action: pan-y;
+}
+.comm-hero-img { width: 100%; height: 100%; background-size: cover; background-position: center; }
+.comm-hero-overlay {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(to top, rgba(74,38,8,0.65) 0%, transparent 55%);
+  pointer-events: none;
+}
+.comm-nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  background: rgba(255,255,255,0.88); border: none; border-radius: 50%;
+  width: 36px; height: 36px; font-size: 20px; cursor: pointer;
+  color: var(--brown); display: flex; align-items: center; justify-content: center; z-index: 4;
+}
+.comm-nav.prev { left: 8px; }
+.comm-nav.next { right: 8px; }
+.comm-nav:active { background: #fff; }
+.comm-photo-count {
+  position: absolute; bottom: 8px; right: 10px;
+  background: rgba(0,0,0,0.42); color: #fff;
+  font-size: 10px; padding: 2px 7px; border-radius: 4px; z-index: 3; pointer-events: none;
+}
+.comm-body { padding: 12px 14px 14px; }
+.comm-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.cdot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.comm-name { font-size: 15px; font-weight: 700; color: var(--brown); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.comm-edit-btn {
+  width: 44px; height: 44px; min-width: 44px;
+  background: none; border: none; cursor: pointer;
+  color: var(--copper-lt); font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 10px; opacity: 0.6; flex-shrink: 0;
+}
+.comm-edit-btn:active { background: var(--sand); opacity: 1; }
+.comm-sub { font-size: 11px; color: var(--brown-lt); margin-bottom: 7px; font-weight: 500; }
+.comm-desc { font-size: 12px; color: var(--brown-lt); line-height: 1.5; margin-bottom: 8px; }
+.comm-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.comm-tag { font-size: 11px; padding: 4px 9px; border-radius: 6px; background: var(--sand-mid); color: var(--brown); border: 1px solid var(--border); }
+.comm-foot { font-size: 11px; color: var(--copper-lt); font-style: italic; margin-bottom: 10px; }
+.comm-browse-btn {
+  width: 100%; height: 44px;
+  border-radius: 9px; border: 1.5px solid rgba(42,143,165,0.4);
+  background: rgba(42,143,165,0.05); color: var(--turquoise);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.comm-browse-btn:active { background: rgba(42,143,165,0.12); }
+
+/* ---- PROPERTY CARD ---- */
+.prop-card {
+  border-radius: 13px; border: 1.5px solid var(--border); background: #fff;
+  margin-bottom: 10px; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(74,38,8,0.07);
+  transition: transform 0.12s;
+}
+.prop-card:active { transform: scale(0.995); }
+.prop-card.selected { border-color: var(--copper); border-width: 2px; box-shadow: 0 4px 14px rgba(184,106,42,0.2); }
+.prop-top { display: flex; align-items: flex-start; padding: 10px; }
+.prop-thumb-col {
+  width: 86px; min-width: 86px; height: 86px; min-height: 86px;
+  position: relative; flex-shrink: 0;
+  border-radius: 10px; overflow: hidden; background: var(--sand-mid);
+}
+.prop-comm-bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; z-index: 2; }
+.prop-thumb {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background-size: cover; background-position: center; background-color: var(--sand-mid);
+}
+.prop-thumb-nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  background: rgba(255,255,255,0.88); border: none; border-radius: 50%;
+  width: 22px; height: 22px; font-size: 13px; cursor: pointer;
+  color: var(--brown); display: flex; align-items: center; justify-content: center; z-index: 3;
+}
+.prop-thumb-nav.prev { left: 1px; }
+.prop-thumb-nav.next { right: 1px; }
+.prop-photo-count {
+  position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.44); color: #fff; font-size: 8px;
+  padding: 1px 4px; border-radius: 3px; z-index: 3; pointer-events: none; white-space: nowrap;
+}
+.thumb-camera {
+  position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+  background: rgba(255,255,255,0.9); border: 1px solid var(--border-md); border-radius: 5px;
+  padding: 3px 6px; font-size: 11px; cursor: pointer; z-index: 3;
+  display: flex; align-items: center; white-space: nowrap; color: var(--copper);
+}
+.thumb-camera input { display: none; }
+.prop-info { flex: 1; padding-left: 10px; min-width: 0; }
+.prop-addr-row { display: flex; align-items: flex-start; gap: 4px; margin-bottom: 4px; }
+.prop-addr { font-size: 13px; font-weight: 700; color: var(--brown); flex: 1; line-height: 1.3; }
+.prop-edit-btn {
+  width: 44px; height: 44px; min-width: 44px;
+  background: none; border: none; cursor: pointer; color: var(--copper-lt);
+  font-size: 17px; display: flex; align-items: center; justify-content: center;
+  border-radius: 9px; opacity: 0.6; flex-shrink: 0; margin-top: -6px;
+}
+.prop-edit-btn:active { background: var(--sand); opacity: 1; }
+.prop-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
+.prop-badge { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; }
+.prop-price-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
+.prop-price { font-size: 16px; font-weight: 700; color: var(--copper); }
+.prop-dom { font-size: 10px; color: var(--brown-lt); }
+.prop-stats { font-size: 11px; color: var(--brown-lt); font-weight: 500; }
+.prop-bottom { padding: 0 12px 12px; border-top: 1px solid var(--border); }
+.prop-feats { display: flex; flex-wrap: wrap; gap: 4px; padding-top: 10px; margin-bottom: 10px; }
+.prop-feat { font-size: 10px; padding: 3px 9px; border-radius: 12px; background: var(--sand); color: var(--brown); border: 1px solid var(--border); white-space: nowrap; }
+.prop-stars { display: flex; gap: 4px; margin-bottom: 10px; }
+.prop-star {
+  font-size: 30px; cursor: pointer; color: var(--sand-dk); line-height: 1;
+  min-width: 42px; min-height: 44px; display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s;
+}
+.prop-star.lit { color: var(--gold); }
+.prop-star:active { transform: scale(1.2); }
+.prop-notes {
+  width: 100%; font-size: 13px; line-height: 1.5;
+  border: 1.5px solid var(--border-md); border-radius: 9px;
+  padding: 9px 11px; resize: none; overflow: hidden; min-height: 60px;
+  background: var(--sand-lt); color: var(--brown); font-family: inherit; outline: none;
+  margin-bottom: 10px; transition: border-color 0.15s;
+}
+.prop-notes:focus { border-color: var(--copper); background: #fff; }
+.prop-notes::placeholder { color: var(--sand-dk); font-style: italic; }
+.prop-zillow {
+  display: flex; align-items: center; justify-content: center;
+  text-decoration: none; font-size: 13px; font-weight: 600;
+  height: 44px; border-radius: 9px;
+  border: 1.5px solid rgba(42,143,165,0.4); color: var(--turquoise);
+  background: rgba(42,143,165,0.05);
+}
+.prop-zillow:active { background: rgba(42,143,165,0.12); }
+
+/* ---- MAP PAGE ---- */
+#pg-map { background: #ddd; }
+#map-wrap { flex: 1; position: relative; }
+#the-map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+.map-filter-bar {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 5px; z-index: 800;
+  background: rgba(239,232,219,0.96); padding: 6px 10px; border-radius: 24px;
+  border: 1px solid var(--border-md); box-shadow: 0 3px 14px rgba(74,38,8,0.18);
+}
+.map-chip {
+  font-size: 12px; font-weight: 600; padding: 5px 13px;
+  border-radius: 14px; border: 1.5px solid var(--border-md);
+  background: #fff; color: var(--brown-lt); cursor: pointer;
+  white-space: nowrap; min-height: 32px; display: flex; align-items: center;
+  transition: all 0.12s;
+}
+.map-chip.on { background: var(--copper); color: #fff; border-color: var(--copper); }
+.map-chip:active { transform: scale(0.95); }
+
+/* ---- MAP BOTTOM SHEET ---- */
+.map-sheet {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #fff; border-radius: 20px 20px 0 0;
+  box-shadow: 0 -6px 30px rgba(74,38,8,0.22);
+  z-index: 700; max-height: 72vh; overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px);
+  -webkit-overflow-scrolling: touch;
+}
+.map-sheet.open { transform: translateY(0); }
+.ms-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--sand-dk); margin: 10px auto 0; display: block; }
+.ms-close-btn {
+  position: absolute; top: 10px; right: 14px;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--sand-dk); border: none; cursor: pointer;
+  font-size: 16px; color: var(--brown-lt);
+  display: flex; align-items: center; justify-content: center;
+}
+.ms-content { padding: 12px 16px 4px; }
+.ms-hero {
+  height: 130px; border-radius: 10px; overflow: hidden;
+  margin-bottom: 12px; position: relative; background: var(--sand-dk);
+  background-size: cover; background-position: center;
+}
+.ms-hero-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(to top, rgba(74,38,8,0.6) 0%, transparent 50%); }
+.ms-price { position: absolute; bottom: 10px; left: 12px; font-size: 19px; font-weight: 700; color: #fff; text-shadow: 0 1px 5px rgba(0,0,0,0.5); }
+.ms-dom-lbl { position: absolute; bottom: 13px; right: 12px; font-size: 10px; color: #fff; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 10px; }
+.ms-addr { font-size: 14px; font-weight: 700; color: var(--brown); margin-bottom: 5px; }
+.ms-badges { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+.ms-badge { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+.ms-stats { display: flex; background: var(--sand); border-radius: 9px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 12px; }
+.ms-stat { flex: 1; padding: 9px 0; text-align: center; border-right: 1px solid var(--border); }
+.ms-stat:last-child { border-right: none; }
+.ms-stat-val { font-size: 17px; font-weight: 700; color: var(--brown); }
+.ms-stat-lbl { font-size: 9px; color: var(--brown-lt); text-transform: uppercase; letter-spacing: 0.06em; }
+.ms-stars { display: flex; gap: 6px; justify-content: center; margin-bottom: 12px; }
+.ms-star {
+  font-size: 30px; cursor: pointer; color: var(--sand-dk);
+  min-width: 42px; min-height: 44px; display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s;
+}
+.ms-star.lit { color: var(--gold); }
+.ms-star:active { transform: scale(1.2); }
+.ms-zillow {
+  display: flex; align-items: center; justify-content: center;
+  height: 46px; border-radius: 9px; text-decoration: none;
+  border: 1.5px solid rgba(42,143,165,0.4); color: var(--turquoise);
+  background: rgba(42,143,165,0.05); font-size: 13px; font-weight: 600;
+}
+.ms-zillow:active { background: rgba(42,143,165,0.12); }
+
+/* ---- BOTTOM NAV ---- */
+.bottom-nav {
+  flex-shrink: 0; display: flex; position: relative; z-index: 800;
+  height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--sand-lt); border-top: 1px solid var(--border-md);
+  box-shadow: 0 -2px 10px rgba(74,38,8,0.08);
+}
+.nav-btn {
+  flex: 1; background: none; border: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; color: var(--brown-lt); min-height: 56px; padding: 4px;
+}
+.nav-btn.active { color: var(--copper); }
+.nav-btn svg { flex-shrink: 0; }
+.nav-label { font-size: 10px; font-weight: 600; }
+
+/* ---- SHEET BACKDROP ---- */
+.sheet-backdrop {
+  display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(74,38,8,0.4); z-index: 900;
+}
+.sheet-backdrop.open { display: block; }
+
+/* ---- EDIT SHEET ---- */
+.edit-sheet {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #fff; border-radius: 20px 20px 0 0;
+  box-shadow: 0 -8px 40px rgba(74,38,8,0.25); z-index: 1000;
+  max-height: 92vh; max-height: 92dvh;
+  display: flex; flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.32,0.72,0,1);
+}
+.edit-sheet.open { transform: translateY(0); }
+.es-head { flex-shrink: 0; padding: 10px 16px 12px; border-bottom: 1px solid var(--border); }
+.es-handle {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: var(--sand-dk); margin: 0 auto 12px; cursor: grab; display: block;
+}
+.es-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.es-title { font-size: 15px; font-weight: 700; color: var(--brown); line-height: 1.3; flex: 1; }
+.es-close {
+  width: 36px; height: 36px; min-width: 36px; border-radius: 50%;
+  background: var(--sand); border: none; cursor: pointer;
+  font-size: 18px; color: var(--brown-lt); display: flex; align-items: center; justify-content: center;
+}
+.es-close:active { background: var(--sand-mid); }
+.edit-sheet-body {
+  flex: 1; overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+  -webkit-overflow-scrolling: touch;
+}
+.edit-sheet-foot {
+  flex-shrink: 0; padding: 12px 16px;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border); display: flex; gap: 8px; background: #fff;
+}
+.es-save {
+  flex: 1; height: 50px; border-radius: 11px; border: none;
+  background: var(--copper); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.es-save:active { background: var(--copper-dk); }
+.es-save:disabled { background: var(--sand-dk); cursor: not-allowed; }
+.es-cancel {
+  height: 50px; padding: 0 20px; border-radius: 11px;
+  border: 1.5px solid var(--border-md); background: none;
+  color: var(--brown-lt); font-size: 14px; cursor: pointer;
+}
+.ef { display: flex; flex-direction: column; gap: 5px; }
+.ef label { font-size: 10px; font-weight: 700; color: var(--brown-lt); text-transform: uppercase; letter-spacing: 0.08em; }
+.ef input, .ef textarea {
+  border: 1.5px solid var(--border-md); border-radius: 10px;
+  padding: 11px 13px; font-size: 14px; color: var(--brown);
+  background: var(--sand-lt); font-family: inherit; outline: none; width: 100%; min-height: 48px;
+}
+.ef input:focus, .ef textarea:focus { border-color: var(--copper); background: #fff; }
+.ef textarea { resize: none; min-height: 80px; line-height: 1.5; }
+.ef-row { display: flex; gap: 8px; }
+.ef-row .ef { flex: 1; }
+
+/* ---- PHOTO MANAGER ---- */
+.mphoto-list { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; min-height: 105px; align-items: flex-start; scrollbar-width: none; }
+.mphoto-list::-webkit-scrollbar { display: none; }
+.mphoto-item { flex-shrink: 0; width: 88px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.mphoto-thumb { width: 88px; height: 88px; border-radius: 9px; overflow: hidden; border: 1.5px solid var(--border-md); background: var(--sand-mid); position: relative; }
+.mphoto-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mphoto-cover { position: absolute; bottom: 3px; left: 3px; background: rgba(0,0,0,0.55); color: #fff; font-size: 8px; padding: 2px 5px; border-radius: 3px; }
+.mphoto-btns { display: flex; gap: 4px; }
+.mph-btn { background: none; border: 1px solid var(--border-md); border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--brown-lt); padding: 4px 8px; min-height: 32px; min-width: 28px; }
+.mph-btn:active { border-color: var(--copper); color: var(--copper); }
+.mph-btn.rm { color: #c0392b; border-color: rgba(192,57,43,0.3); }
+.mph-btn.rm:active { background: rgba(192,57,43,0.08); border-color: #c0392b; }
+.mphoto-add { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.mphoto-url-in {
+  flex: 1; min-width: 130px; border: 1.5px solid var(--border-md); border-radius: 9px;
+  padding: 9px 11px; font-size: 13px; color: var(--brown);
+  background: var(--sand-lt); outline: none; font-family: inherit; min-height: 44px;
+}
+.mphoto-url-in:focus { border-color: var(--copper); background: #fff; }
+.mph-add-btn {
+  height: 44px; padding: 0 14px; border-radius: 9px;
+  border: 1.5px solid rgba(42,143,165,0.4); background: none;
+  cursor: pointer; font-size: 13px; font-weight: 600; color: var(--turquoise);
+}
+.mph-add-btn:active { background: rgba(42,143,165,0.1); }
+.mph-upload-btn {
+  height: 44px; padding: 0 14px; border-radius: 9px;
+  border: 1.5px solid var(--border-md); background: none;
+  cursor: pointer; font-size: 13px; font-weight: 600; color: var(--copper);
+  display: flex; align-items: center;
+}
+.mph-upload-btn input { display: none; }
+.mphoto-empty { font-size: 12px; color: var(--brown-lt); font-style: italic; padding: 10px 0; }
+
+/* ---- OFFLINE / FLASH ---- */
+.offline-banner {
+  position: fixed; left: 0; right: 0;
+  top: calc(52px + env(safe-area-inset-top, 0px));
+  background: #FF9500; color: #fff;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
+  padding: 8px 16px; text-align: center; z-index: 800;
+  transform: translateY(-100%); transition: transform 0.3s;
+}
+.offline-banner.show { transform: translateY(0); }
+.flash-toast {
+  position: fixed; z-index: 1500; pointer-events: none;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 14px);
+  left: 50%; transform: translateX(-50%) translateY(12px);
+  background: rgba(74,38,8,0.88); color: #fff;
+  font-size: 12px; font-weight: 600; padding: 8px 18px;
+  border-radius: 20px; white-space: nowrap;
+  opacity: 0; transition: opacity 0.25s, transform 0.25s;
+}
+.flash-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---- LEAFLET OVERRIDES ---- */
+.leaflet-container { background: #d8d3c9; }
+.leaflet-popup-content { margin: 0; }
+.leaflet-popup-content-wrapper { border-radius: 10px !important; padding: 0 !important; overflow: hidden !important; }
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-str); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">Loading properties...</div>
+</div>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="logo-mark">
+    <div class="logo-bar-m"></div>
+    <div class="logo-text-m">
+      <div class="logo-p">Pennington</div>
+      <div class="logo-sub">Migration &nbsp;&middot;&nbsp; April 2026</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="conn-indicator" id="conn-indicator" onclick="syncData()" title="Tap to sync">
+      <div class="conn-dot" id="conn-dot"></div>
+      <span class="conn-label" id="conn-label">Synced</span>
+    </div>
+    <button class="hdr-icon-btn" onclick="exportNotes()" title="Export notes">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="content">
+
+  <!-- TAB 0: COMMUNITIES -->
+  <div class="page active" id="pg-comm">
+    <div class="chips-bar" id="comm-chips"></div>
+    <div class="scroll-list" id="comm-list"></div>
+  </div>
+
+  <!-- TAB 1: PROPERTIES -->
+  <div class="page" id="pg-props">
+    <div class="chips-bar" id="prop-chips"></div>
+    <div class="scroll-list" id="prop-list"></div>
+  </div>
+
+  <!-- TAB 2: MAP -->
+  <div class="page" id="pg-map">
+    <div id="map-wrap">
+      <div id="the-map"></div>
+      <div class="map-filter-bar" id="map-filter"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nb0" onclick="gTab(0)">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="7" width="7" height="14"/><rect x="14" y="3" width="7" height="18"/><path d="M3 21h18"/>
+    </svg>
+    <span class="nav-label">Communities</span>
+  </button>
+  <button class="nav-btn" id="nb1" onclick="gTab(1)">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+    <span class="nav-label">Properties</span>
+  </button>
+  <button class="nav-btn" id="nb2" onclick="gTab(2)">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
+    </svg>
+    <span class="nav-label">Map</span>
+  </button>
+</nav>
+
+<!-- SHEET BACKDROP -->
+<div class="sheet-backdrop" id="sheet-backdrop" onclick="closeEdit()"></div>
+
+<!-- EDIT SHEET -->
+<div class="edit-sheet" id="edit-sheet">
+  <div class="es-head">
+    <div class="es-handle" id="es-handle"></div>
+    <div class="es-title-row">
+      <div class="es-title" id="es-title">Edit</div>
+      <button class="es-close" onclick="closeEdit()">&#215;</button>
+    </div>
+  </div>
+  <div class="edit-sheet-body" id="edit-sheet-body"></div>
+  <div class="edit-sheet-foot">
+    <button class="es-cancel" onclick="closeEdit()">Cancel</button>
+    <button class="es-save" id="es-save" onclick="saveEdit()">Save changes</button>
+  </div>
+</div>
+
+<!-- MAP BOTTOM SHEET -->
+<div class="map-sheet" id="map-sheet">
+  <div class="ms-handle" id="ms-handle"></div>
+  <button class="ms-close-btn" onclick="closeMapSheet()">&#215;</button>
+  <div class="ms-content">
+    <div class="ms-hero" id="ms-hero">
+      <div class="ms-hero-overlay"></div>
+      <div class="ms-price" id="ms-price"></div>
+      <div class="ms-dom-lbl" id="ms-dom"></div>
+    </div>
+    <div class="ms-addr" id="ms-addr"></div>
+    <div class="ms-badges" id="ms-badges"></div>
+    <div class="ms-stats">
+      <div class="ms-stat"><div class="ms-stat-val" id="ms-beds"></div><div class="ms-stat-lbl">Beds</div></div>
+      <div class="ms-stat"><div class="ms-stat-val" id="ms-baths"></div><div class="ms-stat-lbl">Baths</div></div>
+      <div class="ms-stat"><div class="ms-stat-val" id="ms-sqft"></div><div class="ms-stat-lbl">Sqft</div></div>
+    </div>
+    <div class="ms-stars" id="ms-stars"></div>
+    <a class="ms-zillow" id="ms-zillow" href="#" target="_blank">View on Zillow &#8594;</a>
+  </div>
+</div>
+
+<!-- OFFLINE BANNER + FLASH -->
+<div class="offline-banner" id="offline-banner">No internet connection &mdash; changes queued locally</div>
+<div class="flash-toast" id="flash-toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============================================================
+   CONFIG & STATE
+   ============================================================ */
+const SUPA_URL = 'https://kqsmprkeavuchcpnixfx.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtxc21wcmtlYXZ1Y2hjcG5peGZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwODg3OTQsImV4cCI6MjA5MTY2NDc5NH0.9VC01RrDwxViNimZ9ZYGEU8eKatrAlf82DHWebbMTuQ';
+const db = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const QUEUE_KEY = 'offlineQueue';
+const SYNC_KEY  = 'lastSyncedAt';
+
+let C = [];
+const SBP = {};
+const SBC = {};
+const st = { tab: 0, dayFilter: 'all', commFilter: null, mapDay: 'all', pidx: {} };
+let theMap = null, mapMarkers = {}, mapInit = false;
+let editMode = null, editId = null, mPhotos = [];
+const nTimers = {};
+let msOpenId = null;
+
+/* ============================================================
+   BOOTSTRAP
+   ============================================================ */
+(async function bootstrap() {
+  try {
+    const [jsonData] = await Promise.all([
+      fetch('data/properties.json').then(r => { if (!r.ok) throw new Error('JSON ' + r.status); return r.json(); }),
+      loadSB()
+    ]);
+    C = jsonData.communities;
+    renderAll();
+    setupOfflineHandlers();
+    updateConnStatus();
+    document.getElementById('loading').classList.add('hidden');
+    setTimeout(() => document.getElementById('loading').remove(), 400);
+  } catch(e) {
+    document.getElementById('loading-text').textContent = 'Load error: ' + e.message;
+  }
+})();
+
+/* ============================================================
+   SUPABASE
+   ============================================================ */
+async function loadSB() {
+  try {
+    const [p, c] = await Promise.all([
+      db.from('property_data').select('*'),
+      db.from('community_data').select('*')
+    ]);
+    (p.data||[]).forEach(r => SBP[r.id] = r);
+    (c.data||[]).forEach(r => SBC[r.id] = r);
+    localStorage.setItem(SYNC_KEY, Date.now().toString());
+  } catch(e) { /* offline — silently use cached/JSON data */ }
+}
+
+async function syncData() {
+  if (!navigator.onLine) { showFlash('Offline — changes are queued'); return; }
+  setConnStatus('yellow', 'Syncing...');
+  await flushQueue();
+  await loadSB();
+  renderAll();
+  if (mapInit) updateMapMarkers();
+  updateConnStatus();
+  showFlash('Synced');
+}
+
+/* ============================================================
+   DATA HELPERS
+   ============================================================ */
+function merged(h, c) {
+  const sb = SBP[h.id] || {};
+  return {
+    ...h,
+    cid: c.id, cn: c.name, clr: c.color, dk: c.colorDark, d: c.day,
+    price:    sb.price    || h.price,
+    beds:     sb.beds     ?? h.beds,
+    baths:    sb.baths    ?? h.baths,
+    sqft:     sb.sqft     ?? h.sqft,
+    dom:      sb.dom      ?? h.dom,
+    features: sb.features || h.features,
+    zillow:   sb.zillow   || h.zillow,
+    rating:   sb.rating   || 0,
+    notes:    sb.notes    || '',
+  };
+}
+function flat() { return C.flatMap(c => c.properties.map(h => merged(h, c))); }
+function propPhotos(h) {
+  const sb = SBP[h.id];
+  if (sb?.photos?.length) return sb.photos;
+  return [h.photo].filter(Boolean);
+}
+function commPhotos(c) {
+  const sb = SBC[c.id];
+  if (sb?.photos?.length) return sb.photos;
+  return [c.photo].filter(Boolean);
+}
+
+/* ============================================================
+   OFFLINE QUEUE
+   ============================================================ */
+function queueWrite(id, type, value) {
+  const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+  const filtered = q.filter(item => !(item.id === id && item.type === type));
+  filtered.push({ id, type, value, timestamp: Date.now() });
+  localStorage.setItem(QUEUE_KEY, JSON.stringify(filtered));
+}
+
+async function flushQueue() {
+  if (!navigator.onLine) return;
+  const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+  if (!q.length) return;
+  const lastSynced = parseInt(localStorage.getItem(SYNC_KEY) || '0');
+  for (const item of q) {
+    try {
+      const { data: current } = await db.from('property_data')
+        .select('rating, notes, photos, updated_at').eq('id', item.id).maybeSingle();
+      const remoteTs = current ? new Date(current.updated_at).getTime() : 0;
+      if (item.type === 'rating') {
+        if (item.timestamp >= remoteTs) {
+          await db.from('property_data').upsert({ id: item.id, rating: item.value }, { onConflict: 'id' });
+        }
+      } else if (item.type === 'notes') {
+        if (remoteTs <= lastSynced) {
+          await db.from('property_data').upsert({ id: item.id, notes: item.value }, { onConflict: 'id' });
+        } else {
+          const ts = new Date(item.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+          const merged = (current?.notes || '') + ' [Offline ' + ts + ': ' + item.value + ']';
+          await db.from('property_data').upsert({ id: item.id, notes: merged }, { onConflict: 'id' });
+        }
+      } else if (item.type === 'photo') {
+        const existing = current?.photos || [];
+        const photos = [...existing, item.value];
+        await db.from('property_data').upsert({ id: item.id, photos }, { onConflict: 'id' });
+      }
+    } catch(e) { /* skip failed item, try next */ }
+  }
+  localStorage.removeItem(QUEUE_KEY);
+  localStorage.setItem(SYNC_KEY, Date.now().toString());
+}
+
+function hasQueuedChanges() {
+  const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+  return q.length > 0;
+}
+
+function setupOfflineHandlers() {
+  window.addEventListener('online',  () => { updateConnStatus(); flushQueue().then(() => { loadSB().then(() => { renderAll(); if(mapInit) updateMapMarkers(); updateConnStatus(); }); }); });
+  window.addEventListener('offline', () => { updateConnStatus(); });
+}
+
+function updateConnStatus() {
+  if (!navigator.onLine) { setConnStatus('red', 'Offline'); showOfflineBanner(true); return; }
+  showOfflineBanner(false);
+  if (hasQueuedChanges()) { setConnStatus('yellow', 'Unsynced'); }
+  else { setConnStatus('green', 'Synced'); }
+}
+
+function setConnStatus(color, label) {
+  const dot = document.getElementById('conn-dot');
+  const lbl = document.getElementById('conn-label');
+  if (dot) { dot.className = 'conn-dot' + (color !== 'green' ? ' ' + color : ''); }
+  if (lbl) lbl.textContent = label;
+}
+
+function showOfflineBanner(show) {
+  const el = document.getElementById('offline-banner');
+  if (el) el.classList.toggle('show', show);
+}
+
+/* ============================================================
+   RENDER ALL
+   ============================================================ */
+function renderAll() { renderComm(); renderProps(); }
+
+/* ============================================================
+   TAB SWITCHING
+   ============================================================ */
+function gTab(n) {
+  st.tab = n;
+  document.querySelectorAll('.page').forEach((p, i) => p.classList.toggle('active', i === n));
+  document.querySelectorAll('.nav-btn').forEach((b, i) => b.classList.toggle('active', i === n));
+  if (n === 2) {
+    if (!mapInit) { initMap(); mapInit = true; }
+    else setTimeout(() => theMap.invalidateSize(), 60);
+  }
+}
+
+/* ============================================================
+   COMMUNITY TAB
+   ============================================================ */
+function renderCommChips() {
+  const bar = document.getElementById('comm-chips');
+  const days = [['all','All'],['W','Wednesday'],['T','Thursday']];
+  bar.innerHTML = days.map(([d,lbl]) =>
+    `<button class="chip${st.dayFilter===d?' on':''}" onclick="setDayFilter('${d}',this,true)">${lbl}</button>`
+  ).join('');
+}
+
+function setDayFilter(d, btn, isComm) {
+  st.dayFilter = d;
+  if (isComm) { renderCommChips(); renderComm(); }
+  else { renderPropChips(); renderProps(); }
+}
+
+function renderComm() {
+  renderCommChips();
+  const dn = { W:'Wednesday', T:'Thursday' };
+  const list = st.dayFilter === 'all' ? C : C.filter(c => c.day === st.dayFilter);
+  document.getElementById('comm-list').innerHTML = list.map(c => {
+    const sb = SBC[c.id] || {};
+    const name = sb.name || c.name;
+    const desc = sb.description || c.desc;
+    const amenities = sb.amenities || c.amenities;
+    const hoa = sb.hoa || c.hoa;
+    const photos = commPhotos(c);
+    const key = 'c_' + c.id;
+    const idx = Math.min(st.pidx[key] || 0, photos.length - 1);
+    const photo = photos[idx] || '';
+    return `<div class="comm-card" id="cc-${c.id}">
+      <div class="comm-hero" id="ch-${c.id}" onclick="browseComm('${c.id}')">
+        <div class="comm-hero-img" id="chi-${c.id}" style="background-image:url('${photo}')"></div>
+        <div class="comm-hero-overlay"></div>
+        ${photos.length > 1 ? `
+          <button class="comm-nav prev" onclick="navCommPhoto('${c.id}',-1,event)">&#8249;</button>
+          <button class="comm-nav next" onclick="navCommPhoto('${c.id}',1,event)">&#8250;</button>
+          <div class="comm-photo-count">${idx+1}/${photos.length}</div>` : ''}
+      </div>
+      <div class="comm-body">
+        <div class="comm-head">
+          <div class="cdot" style="background:${c.color}"></div>
+          <span class="comm-name">${name}</span>
+          <button class="comm-edit-btn" onclick="openCommEdit('${c.id}',event)" title="Edit">&#9998;</button>
+        </div>
+        <div class="comm-sub">${dn[c.day]} &nbsp;&middot;&nbsp; HOA ${hoa}</div>
+        <div class="comm-desc">${desc}</div>
+        <div class="comm-tags">${amenities.map(a => `<span class="comm-tag">${a}</span>`).join('')}</div>
+        <div class="comm-foot">${c.properties.length} home${c.properties.length !== 1 ? 's' : ''} on your list</div>
+        <button class="comm-browse-btn" onclick="browseComm('${c.id}')">Browse ${c.properties.length} properties &#8594;</button>
+      </div>
+    </div>`;
+  }).join('') || `<div style="text-align:center;color:var(--brown-lt);padding:40px 20px;font-size:13px;">No communities on this day.</div>`;
+  setupCommSwipes();
+}
+
+function setupCommSwipes() {
+  C.forEach(c => {
+    const hero = document.getElementById('ch-' + c.id);
+    if (!hero) return;
+    addSwipe(hero,
+      () => navCommPhoto(c.id, 1, null),
+      () => navCommPhoto(c.id, -1, null)
+    );
+  });
+}
+
+function navCommPhoto(id, dir, e) {
+  if (e) e.stopPropagation();
+  const c = C.find(x => x.id === id); if (!c) return;
+  const photos = commPhotos(c), key = 'c_' + id;
+  st.pidx[key] = ((st.pidx[key] || 0) + dir + photos.length) % photos.length;
+  const img = document.getElementById('chi-' + id);
+  if (img) img.style.backgroundImage = `url('${photos[st.pidx[key]]}')`;
+  const cnt = document.querySelector(`#cc-${id} .comm-photo-count`);
+  if (cnt) cnt.textContent = `${st.pidx[key]+1}/${photos.length}`;
+}
+
+function browseComm(id) {
+  st.commFilter = id;
+  gTab(1);
+}
+
+/* ============================================================
+   PROPERTIES TAB
+   ============================================================ */
+function renderPropChips() {
+  const bar = document.getElementById('prop-chips');
+  const days = [['all','All'],['W','Wed'],['T','Thu']];
+  let html = days.map(([d,lbl]) =>
+    `<button class="chip${st.dayFilter===d?' on':''}" onclick="setPropDayFilter('${d}')">${lbl}</button>`
+  ).join('');
+  if (st.commFilter) {
+    const c = C.find(x => x.id === st.commFilter);
+    const name = c ? (SBC[c.id]?.name || c.name) : 'Community';
+    html += `<div class="chip-sep"></div>`;
+    html += `<button class="chip on" style="background:${c?.color||'var(--copper)'};border-color:${c?.color||'var(--copper)'}" onclick="clearCommFilter()">
+      ${name} &nbsp;&#215;
+    </button>`;
+  }
+  bar.innerHTML = html;
+}
+
+function setPropDayFilter(d) {
+  st.dayFilter = d;
+  renderPropChips(); renderProps();
+}
+
+function clearCommFilter() {
+  st.commFilter = null;
+  renderPropChips(); renderProps();
+}
+
+function renderProps() {
+  renderPropChips();
+  let homes = flat();
+  if (st.dayFilter !== 'all') homes = homes.filter(h => h.d === st.dayFilter);
+  if (st.commFilter) homes = homes.filter(h => h.cid === st.commFilter);
+  document.getElementById('prop-list').innerHTML = homes.map(h => propCard(h)).join('') ||
+    `<div style="text-align:center;color:var(--brown-lt);padding:40px 20px;font-size:13px;">No properties match this filter.</div>`;
+  requestAnimationFrame(initNotesResize);
+}
+
+function propCard(h) {
+  const photos = propPhotos(h);
+  const idx = Math.min(st.pidx[h.id] || 0, photos.length - 1);
+  const photo = photos[idx] || '';
+  const r = h.rating || 0;
+  const dayLabel = h.d === 'W' ? 'Wed 4/15' : 'Thu 4/16';
+  return `<div class="prop-card" id="pc-${h.id}">
+    <div class="prop-top">
+      <div class="prop-thumb-col" id="ptc-${h.id}">
+        <div class="prop-comm-bar" style="background:${h.clr}"></div>
+        <div class="prop-thumb" id="pt-${h.id}" style="background-image:url('${photo}')"></div>
+        ${photos.length > 1 ? `
+          <button class="prop-thumb-nav prev" onclick="navPropPhoto('${h.id}',-1,event)">&#8249;</button>
+          <button class="prop-thumb-nav next" onclick="navPropPhoto('${h.id}',1,event)">&#8250;</button>
+          <div class="prop-photo-count">${idx+1}/${photos.length}</div>` : ''}
+        <label class="thumb-camera" onclick="event.stopPropagation()" title="Add photo">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <input type="file" accept="image/*" onchange="uploadPropPhoto('${h.id}',this.files[0])">
+        </label>
+      </div>
+      <div class="prop-info">
+        <div class="prop-addr-row">
+          <div class="prop-addr">${h.address}</div>
+          <button class="prop-edit-btn" onclick="openPropEdit('${h.id}',event)" title="Edit">&#9998;</button>
+        </div>
+        <div class="prop-badges">
+          <span class="prop-badge" style="background:${h.clr}22;color:${h.dk}">${h.cn}</span>
+          <span class="prop-badge" style="background:#EFE8DB;color:#7A4A20">${dayLabel}</span>
+        </div>
+        <div class="prop-price-row">
+          <span class="prop-price">${h.price}</span>
+          <span class="prop-dom">${h.dom}d listed</span>
+        </div>
+        <div class="prop-stats">${h.beds}bd &nbsp;&middot;&nbsp; ${h.baths}ba &nbsp;&middot;&nbsp; ${h.sqft.toLocaleString()} sqft</div>
+      </div>
+    </div>
+    <div class="prop-bottom">
+      <div class="prop-feats">${h.features.slice(0,3).map(f => `<span class="prop-feat">${f}</span>`).join('')}</div>
+      <div class="prop-stars" id="psr-${h.id}">
+        ${[1,2,3,4,5].map(n => `<span class="prop-star${r>=n?' lit':''}" onclick="setRating('${h.id}',${n})">&#9733;</span>`).join('')}
+      </div>
+      <textarea class="prop-notes" id="pn-${h.id}" placeholder="Tour notes..." oninput="onNotesInput('${h.id}',this)">${h.notes}</textarea>
+      <a class="prop-zillow" href="${h.zillow}" target="_blank" onclick="event.stopPropagation()">View on Zillow &#8594;</a>
+    </div>
+  </div>`;
+}
+
+function navPropPhoto(id, dir, e) {
+  e.stopPropagation();
+  const h = flat().find(x => x.id === id); if (!h) return;
+  const photos = propPhotos(h);
+  st.pidx[id] = ((st.pidx[id] || 0) + dir + photos.length) % photos.length;
+  const thumb = document.getElementById('pt-' + id);
+  const cnt = document.querySelector(`#ptc-${id} .prop-photo-count`);
+  if (thumb) thumb.style.backgroundImage = `url('${photos[st.pidx[id]] || ''}')`;
+  if (cnt) cnt.textContent = `${st.pidx[id]+1}/${photos.length}`;
+}
+
+function initNotesResize() {
+  document.querySelectorAll('.prop-notes').forEach(ta => {
+    ta.style.height = 'auto';
+    ta.style.height = Math.max(60, ta.scrollHeight) + 'px';
+  });
+}
+
+function onNotesInput(id, el) {
+  el.style.height = 'auto';
+  el.style.height = Math.max(60, el.scrollHeight) + 'px';
+  setNotes(id, el.value);
+}
+
+/* ============================================================
+   INTERACTIONS: STARS, NOTES, PHOTOS
+   ============================================================ */
+async function setRating(id, n) {
+  SBP[id] = { ...(SBP[id] || { id }), rating: n };
+  // Update stars in all rendered copies
+  document.querySelectorAll(`#psr-${id} .prop-star, #msr-${id} .ms-star`).forEach((s, i) => s.classList.toggle('lit', i < n));
+  if (navigator.onLine) {
+    await db.from('property_data').upsert({ id, rating: n }, { onConflict: 'id' });
+    showFlash('Rating saved');
+  } else {
+    queueWrite(id, 'rating', n);
+    updateConnStatus();
+    showFlash('Queued offline');
+  }
+}
+
+function setNotes(id, v) {
+  SBP[id] = { ...(SBP[id] || { id }), notes: v };
+  clearTimeout(nTimers[id]);
+  nTimers[id] = setTimeout(async () => {
+    if (navigator.onLine) {
+      await db.from('property_data').upsert({ id, notes: v }, { onConflict: 'id' });
+      showFlash('Saved');
+    } else {
+      queueWrite(id, 'notes', v);
+      updateConnStatus();
+    }
+  }, 800);
+}
+
+async function uploadPropPhoto(id, file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = async () => {
+      const canvas = document.createElement('canvas');
+      const maxW = 700, scale = Math.min(1, maxW / img.width);
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
+      const existing = SBP[id]?.photos || [];
+      const photos = [...existing, dataUrl];
+      SBP[id] = { ...(SBP[id] || { id }), photos };
+      st.pidx[id] = photos.length - 1;
+      if (navigator.onLine) {
+        await db.from('property_data').upsert({ id, photos }, { onConflict: 'id' });
+        showFlash('Photo saved');
+      } else {
+        queueWrite(id, 'photo', dataUrl);
+        updateConnStatus();
+        showFlash('Photo queued offline');
+      }
+      renderProps();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ============================================================
+   MAP TAB
+   ============================================================ */
+function initMap() {
+  theMap = L.map('the-map', { zoomControl: false }).setView([36.17, -115.15], 10);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CartoDB', maxZoom: 18
+  }).addTo(theMap);
+  L.control.zoom({ position: 'bottomright' }).addTo(theMap);
+  flat().forEach(h => {
+    const comm = C.find(c => c.id === h.cid);
+    mapMarkers[h.id] = L.marker([h.lat, h.lng], { icon: mkIcon(h.clr) }).addTo(theMap)
+      .on('click', () => openMapSheet(h.id));
+  });
+  renderMapFilter();
+  // Setup map sheet drag-to-close
+  setupSheetDrag(document.getElementById('ms-handle'), closeMapSheet);
+}
+
+function mkIcon(clr) {
+  const s = `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="28" viewBox="0 0 22 28"><path d="M11 0C4.9 0 0 4.9 0 11c0 8.3 11 17 11 17S22 19.3 22 11C22 4.9 17.1 0 11 0z" fill="${clr}" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/><circle cx="11" cy="11" r="4.5" fill="rgba(255,255,255,0.45)"/></svg>`;
+  return L.divIcon({ html: s, iconSize: [22, 28], iconAnchor: [11, 28], popupAnchor: [0, -30], className: '' });
+}
+
+function renderMapFilter() {
+  const bar = document.getElementById('map-filter');
+  const days = [['all','All'],['W','Wed'],['T','Thu']];
+  bar.innerHTML = days.map(([d,lbl]) =>
+    `<button class="map-chip${st.mapDay===d?' on':''}" onclick="setMapDay('${d}')">${lbl}</button>`
+  ).join('');
+}
+
+function setMapDay(d) {
+  st.mapDay = d;
+  renderMapFilter();
+  updateMapMarkers();
+}
+
+function updateMapMarkers() {
+  if (!mapInit) return;
+  flat().forEach(h => {
+    if (!mapMarkers[h.id]) return;
+    const visible = st.mapDay === 'all' || h.d === st.mapDay;
+    mapMarkers[h.id].setOpacity(visible ? 1 : 0.1);
+  });
+}
+
+function openMapSheet(id) {
+  const h = flat().find(x => x.id === id); if (!h) return;
+  const comm = C.find(c => c.id === h.cid);
+  msOpenId = id;
+  const photos = propPhotos(h);
+  const photo = photos[0] || (comm?.photo || '');
+  const sheet = document.getElementById('map-sheet');
+  document.getElementById('ms-hero').style.backgroundImage = `url('${photo}')`;
+  document.getElementById('ms-price').textContent = h.price;
+  document.getElementById('ms-dom').textContent = h.dom + 'd listed';
+  document.getElementById('ms-addr').textContent = h.address;
+  const dayLabel = h.d === 'W' ? 'Wed 4/15' : 'Thu 4/16';
+  document.getElementById('ms-badges').innerHTML =
+    `<span class="ms-badge" style="background:${h.clr}22;color:${h.dk}">${h.cn}</span>` +
+    `<span class="ms-badge" style="background:#EFE8DB;color:#7A4A20">${dayLabel}</span>`;
+  document.getElementById('ms-beds').textContent  = h.beds;
+  document.getElementById('ms-baths').textContent = h.baths;
+  document.getElementById('ms-sqft').textContent  = (h.sqft / 1000).toFixed(1) + 'k';
+  const r = h.rating || 0;
+  document.getElementById('ms-stars').innerHTML = [1,2,3,4,5].map(n =>
+    `<span class="ms-star${r>=n?' lit':''}" id="msr${id}-${n}" onclick="setRating('${id}',${n})">&#9733;</span>`
+  ).join('');
+  document.getElementById('ms-zillow').href = h.zillow;
+  sheet.classList.add('open');
+  // Fly map to property
+  theMap.flyTo([h.lat, h.lng], 15, { duration: 0.6 });
+}
+
+function closeMapSheet() {
+  document.getElementById('map-sheet').classList.remove('open');
+  msOpenId = null;
+}
+
+/* ============================================================
+   EDIT SHEET - PROPERTY
+   ============================================================ */
+function openPropEdit(id, e) {
+  if (e) e.stopPropagation();
+  editMode = 'property'; editId = id;
+  const h = flat().find(x => x.id === id);
+  mPhotos = [...propPhotos(h)];
+  document.getElementById('es-title').textContent = h.address;
+  document.getElementById('edit-sheet-body').innerHTML = `
+    <div class="ef"><label>Price</label><input id="ef-price" value="${h.price}"></div>
+    <div class="ef-row">
+      <div class="ef"><label>Beds</label><input id="ef-beds" type="number" value="${h.beds}"></div>
+      <div class="ef"><label>Baths</label><input id="ef-baths" type="number" step="0.5" value="${h.baths}"></div>
+    </div>
+    <div class="ef-row">
+      <div class="ef"><label>Sqft</label><input id="ef-sqft" type="number" value="${h.sqft}"></div>
+      <div class="ef"><label>Days listed</label><input id="ef-dom" type="number" value="${h.dom}"></div>
+    </div>
+    <div class="ef"><label>Features (comma-separated)</label><input id="ef-feats" value="${h.features.join(', ')}"></div>
+    <div class="ef"><label>Zillow URL</label><input id="ef-zillow" value="${h.zillow}"></div>
+    <div class="ef"><label>Notes</label><textarea id="ef-notes">${h.notes}</textarea></div>
+    <div class="ef">
+      <label>Photos &mdash; <span style="font-weight:400;text-transform:none;font-style:italic;letter-spacing:0;">first is cover; reorder or delete below</span></label>
+      <div class="mphoto-list" id="mphoto-list">${renderMPhotos()}</div>
+      <div class="mphoto-add">
+        <input class="mphoto-url-in" type="text" id="mphoto-url" placeholder="Paste photo URL...">
+        <button class="mph-add-btn" onclick="addMPhotoUrl()">Add URL</button>
+        <label class="mph-upload-btn">&#128247; Upload<input type="file" accept="image/*" multiple onchange="addMPhotoUpload(this.files)"></label>
+      </div>
+    </div>`;
+  openEditSheet();
+}
+
+/* ============================================================
+   EDIT SHEET - COMMUNITY
+   ============================================================ */
+function openCommEdit(id, e) {
+  if (e) e.stopPropagation();
+  editMode = 'community'; editId = id;
+  const c = C.find(x => x.id === id), sb = SBC[id] || {};
+  mPhotos = [...commPhotos(c)];
+  document.getElementById('es-title').textContent = sb.name || c.name;
+  document.getElementById('edit-sheet-body').innerHTML = `
+    <div class="ef"><label>Name</label><input id="ef-cname" value="${sb.name || c.name}"></div>
+    <div class="ef"><label>Description</label><textarea id="ef-cdesc">${sb.description || c.desc}</textarea></div>
+    <div class="ef"><label>Amenities (comma-separated)</label><input id="ef-camen" value="${(sb.amenities || c.amenities).join(', ')}"></div>
+    <div class="ef"><label>HOA</label><input id="ef-choa" value="${sb.hoa || c.hoa}"></div>
+    <div class="ef">
+      <label>Photos &mdash; <span style="font-weight:400;text-transform:none;font-style:italic;letter-spacing:0;">first is cover</span></label>
+      <div class="mphoto-list" id="mphoto-list">${renderMPhotos()}</div>
+      <div class="mphoto-add">
+        <input class="mphoto-url-in" type="text" id="mphoto-url" placeholder="Paste photo URL...">
+        <button class="mph-add-btn" onclick="addMPhotoUrl()">Add URL</button>
+        <label class="mph-upload-btn">&#128247; Upload<input type="file" accept="image/*" multiple onchange="addMPhotoUpload(this.files)"></label>
+      </div>
+    </div>`;
+  openEditSheet();
+}
+
+function openEditSheet() {
+  document.getElementById('sheet-backdrop').classList.add('open');
+  document.getElementById('edit-sheet').classList.add('open');
+}
+
+/* ============================================================
+   PHOTO MANAGER
+   ============================================================ */
+function renderMPhotos() {
+  if (!mPhotos.length) return `<div class="mphoto-empty">No photos yet. Add one below.</div>`;
+  return mPhotos.map((p, i) => `
+    <div class="mphoto-item">
+      <div class="mphoto-thumb">
+        <img src="${p}" onerror="this.style.opacity=0.3" alt="">
+        ${i === 0 ? '<span class="mphoto-cover">cover</span>' : ''}
+      </div>
+      <div class="mphoto-btns">
+        ${i > 0 ? `<button class="mph-btn" onclick="moveMPhoto(${i},-1)">&#8593;</button>` : `<span style="display:inline-block;width:30px;height:32px"></span>`}
+        ${i < mPhotos.length-1 ? `<button class="mph-btn" onclick="moveMPhoto(${i},1)">&#8595;</button>` : `<span style="display:inline-block;width:30px;height:32px"></span>`}
+        <button class="mph-btn rm" onclick="rmMPhoto(${i})">&#215;</button>
+      </div>
+    </div>`).join('');
+}
+
+function refreshMPhotos() { document.getElementById('mphoto-list').innerHTML = renderMPhotos(); }
+function moveMPhoto(i, dir) { const j = i+dir; if(j<0||j>=mPhotos.length) return; [mPhotos[i],mPhotos[j]]=[mPhotos[j],mPhotos[i]]; refreshMPhotos(); }
+function rmMPhoto(i) { mPhotos.splice(i, 1); refreshMPhotos(); }
+function addMPhotoUrl() {
+  const url = document.getElementById('mphoto-url').value.trim();
+  if (!url) return;
+  mPhotos.push(url);
+  document.getElementById('mphoto-url').value = '';
+  refreshMPhotos();
+}
+function addMPhotoUpload(files) {
+  if (!files || !files.length) return;
+  const arr = Array.from(files); let done = 0;
+  arr.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxW = 800, scale = Math.min(1, maxW / img.width);
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        mPhotos.push(canvas.toDataURL('image/jpeg', 0.80));
+        if (++done === arr.length) refreshMPhotos();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ============================================================
+   SAVE / CLOSE EDIT
+   ============================================================ */
+async function saveEdit() {
+  const btn = document.getElementById('es-save');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    if (editMode === 'property') {
+      const fields = {
+        id: editId,
+        price: document.getElementById('ef-price').value.trim(),
+        beds: parseFloat(document.getElementById('ef-beds').value) || null,
+        baths: parseFloat(document.getElementById('ef-baths').value) || null,
+        sqft: parseInt(document.getElementById('ef-sqft').value) || null,
+        dom: parseInt(document.getElementById('ef-dom').value) || null,
+        features: document.getElementById('ef-feats').value.split(',').map(f => f.trim()).filter(Boolean),
+        zillow: document.getElementById('ef-zillow').value.trim(),
+        notes: document.getElementById('ef-notes').value,
+        photos: mPhotos,
+      };
+      SBP[editId] = { ...(SBP[editId] || {}), ...fields };
+      if (navigator.onLine) {
+        await db.from('property_data').upsert(fields, { onConflict: 'id' });
+      } else {
+        Object.entries(fields).forEach(([k,v]) => { if (k !== 'id') queueWrite(editId, k, v); });
+        updateConnStatus();
+      }
+    } else {
+      const fields = {
+        id: editId,
+        name: document.getElementById('ef-cname').value.trim(),
+        description: document.getElementById('ef-cdesc').value.trim(),
+        amenities: document.getElementById('ef-camen').value.split(',').map(a => a.trim()).filter(Boolean),
+        hoa: document.getElementById('ef-choa').value.trim(),
+        photos: mPhotos,
+      };
+      SBC[editId] = { ...(SBC[editId] || {}), ...fields };
+      if (navigator.onLine) {
+        await db.from('community_data').upsert(fields, { onConflict: 'id' });
+      }
+    }
+    closeEdit(); renderAll(); showFlash('Saved');
+  } catch(err) { alert('Save failed: ' + err.message); }
+  finally { btn.disabled = false; btn.textContent = 'Save changes'; }
+}
+
+function closeEdit() {
+  document.getElementById('sheet-backdrop').classList.remove('open');
+  document.getElementById('edit-sheet').classList.remove('open');
+  editMode = null; editId = null; mPhotos = [];
+}
+
+/* ============================================================
+   SWIPE + DRAG HELPERS
+   ============================================================ */
+function addSwipe(el, onLeft, onRight) {
+  let sx = null, sy = null;
+  el.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; }, { passive: true });
+  el.addEventListener('pointerup', e => {
+    if (sx === null) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      if (dx < 0) onLeft(); else onRight();
+    }
+    sx = null; sy = null;
+  }, { passive: true });
+}
+
+function setupSheetDrag(handleEl, closeFn) {
+  if (!handleEl) return;
+  let startY = null;
+  const sheet = handleEl.closest('.map-sheet, .edit-sheet');
+  handleEl.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, { passive: true });
+  handleEl.addEventListener('touchmove', e => {
+    if (startY === null) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy > 0 && sheet) sheet.style.transform = `translateY(${dy}px)`;
+  }, { passive: true });
+  handleEl.addEventListener('touchend', e => {
+    if (startY === null) return;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (sheet) sheet.style.transform = '';
+    if (dy > 80) closeFn();
+    startY = null;
+  }, { passive: true });
+}
+
+/* ============================================================
+   EXPORT
+   ============================================================ */
+function exportNotes() {
+  const homes = flat();
+  let txt = 'PENNINGTON HOUSE TOUR NOTES\nApril 15-16, 2026 | Las Vegas & Henderson, NV\n';
+  txt += 'Generated: ' + new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' }) + '\n';
+  txt += '==========================================\n\n';
+  const reviewed = homes.filter(h => h.rating > 0 || h.notes);
+  const pending  = homes.filter(h => !h.rating && !h.notes);
+  if (reviewed.length) {
+    txt += 'REVIEWED\n\n';
+    reviewed.forEach(h => {
+      txt += h.cn + ' | ' + h.address + '\n';
+      txt += h.price + ' | ' + h.beds + 'bd/' + h.baths + 'ba | ' + h.sqft.toLocaleString() + ' sqft | ' + h.dom + ' days\n';
+      txt += 'Rating: ' + '\u2605'.repeat(h.rating) + '\u2606'.repeat(5 - h.rating) + '\n';
+      txt += 'Notes: ' + (h.notes || '(none)') + '\n';
+      txt += h.zillow + '\n\n';
+    });
+  }
+  if (pending.length) {
+    txt += '\nNOT YET REVIEWED\n';
+    pending.forEach(h => { txt += h.cn + ' | ' + h.address + ' | ' + h.price + '\n'; });
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain' }));
+  a.download = 'pennington-tour-notes.txt';
+  a.click();
+}
+
+/* ============================================================
+   FLASH TOAST
+   ============================================================ */
+let flashTimer = null;
+function showFlash(msg) {
+  const el = document.getElementById('flash-toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+/* ============================================================
+   SERVICE WORKER REGISTRATION
+   ============================================================ */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js', { scope: './' })
+    .catch(e => console.log('SW registration skipped:', e.message));
+}
+
+/* ============================================================
+   SETUP EDIT SHEET DRAG
+   ============================================================ */
+window.addEventListener('load', () => {
+  setupSheetDrag(document.getElementById('es-handle'), closeEdit);
+});
+
+/* ============================================================
+   KEYBOARD / ESCAPE
+   ============================================================ */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeEdit(); closeMapSheet(); }
+});
+</script>
+</body>
+</html>

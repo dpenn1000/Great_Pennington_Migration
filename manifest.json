@@ -1,0 +1,15 @@
+{
+  "name": "The Great Pennington Migration",
+  "short_name": "Pennington",
+  "description": "House tour tracker for the Pennington family move to Las Vegas, April 2026.",
+  "start_url": "/Great_Pennington_Migration/mobile.html",
+  "scope": "/Great_Pennington_Migration/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#EFE8DB",
+  "theme_color": "#B86A2A",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
