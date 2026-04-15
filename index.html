@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<script>
+(function() {
+  var mobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    || (window.innerWidth < 768 && ('ontouchstart' in window));
+  if (mobile) window.location.replace('mobile.html');
+})();
+</script>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
